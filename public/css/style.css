@@ -832,12 +832,64 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   border:1px solid var(--border);border-radius:6px;padding:14px;
   display:flex;flex-direction:column;gap:8px;transition:.18s;
 }
+.note-card{
+  background:linear-gradient(165deg,#0a121e,#060b14);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  transition:.18s;
+  overflow:hidden;
+  min-width:0;
+}
 .note-card:hover{border-color:rgba(74,158,255,.4)}
-.note-card .nhead{display:flex;align-items:flex-start;gap:8px}
-.note-card .ntitle{font-weight:700;color:var(--silver);flex:1;font-size:13px}
-.note-card .nbody{font-size:12.5px;color:var(--silver-2);white-space:pre-wrap;line-height:1.55}
+
+.note-card .nhead{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  min-width:0;
+}
+.note-card .ntitle{
+  font-weight:700;
+  color:var(--silver);
+  flex:1;
+  font-size:13px;
+  min-width:0;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+
+.note-card .nbody{
+  font-size:12.5px;
+  color:var(--silver-2);
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  line-height:1.55;
+  max-height:220px;
+  overflow-y:auto;
+}
+.note-card .nbody a{
+  color:var(--primary-light);
+  text-decoration:underline;
+  text-decoration-color:rgba(74,158,255,.4);
+  text-underline-offset:2px;
+}
+.note-card .nbody a:hover{
+  text-decoration-color:var(--primary-light);
+}
+
 .note-card .nfoot{
-  font-size:10.5px;color:var(--muted);display:flex;gap:10px;align-items:center;margin-top:2px;
+  font-size:10.5px;
+  color:var(--muted);
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-top:2px;
+  flex-wrap:wrap;
 }
 
 #modal-root{position:fixed;inset:0;z-index:100;pointer-events:none}

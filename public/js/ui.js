@@ -54,6 +54,14 @@ function isPlayerMode() {
   return document.body.classList.contains('player-mode');
 }
 
+function linkify(text) {
+  const escaped = esc(text);
+  return escaped.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+  );
+}
+
 function safePool(p) {
   return Array.isArray(p?.pool) ? p.pool : [];
 }
@@ -942,7 +950,7 @@ export function viewNotes() {
             <button class="icon-btn" data-act="edit-note" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>
             <button class="icon-btn" data-act="del-note" data-id="${n.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
-        ${n.body?`<div class="nbody">${esc(n.body)}</div>`:''}
+        ${n.body?`<div class="nbody">${linkify(n.body)}</div>`:''}
         <div class="nfoot">
           ${n.tag?`<span class="tag">${esc(n.tag)}</span>`:''}
           <span>${n.date?fmtShort(n.date):''}</span>
