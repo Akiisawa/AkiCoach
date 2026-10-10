@@ -1246,71 +1246,112 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
 .read-roles{
   display:grid;
   grid-template-columns:1fr;
-  gap:6px;
+  gap:8px;
 }
+
 .read-role-row{
+  position:relative;
   display:flex;
   align-items:center;
-  gap:14px;
-  padding:11px 16px;
+  min-height:86px;
+  border-radius:8px;
+  overflow:hidden;
   background:#070d16;
   border:1px solid var(--border-soft);
-  border-radius:6px;
-  transition:.15s;
+  transition:.25s;
+  isolation:isolate;
 }
 .read-role-row:hover{
-  border-color:rgba(74,158,255,.35);
-  background:#0a1420;
+  border-color:rgba(74,158,255,.5);
+  box-shadow:0 4px 16px rgba(0,0,0,.4),0 0 20px rgba(74,158,255,.12);
 }
+
+/* Splash art de fundo */
+.read-role-splash{
+  position:absolute;
+  inset:0;
+  background-size:cover;
+  background-position:center 22%;
+  background-repeat:no-repeat;
+  z-index:0;
+  filter:saturate(.85) brightness(.65);
+  transform:scale(1.02);
+  transition:transform .5s ease, filter .3s ease;
+}
+.read-role-row:hover .read-role-splash{
+  filter:saturate(1) brightness(.85);
+  transform:scale(1.06);
+}
+
+/* Gradiente escuro sobre a splash */
+.read-role-overlay{
+  position:absolute;inset:0;
+  z-index:1;
+  background:
+    linear-gradient(90deg,
+      rgba(4,7,12,.94) 0%,
+      rgba(4,7,12,.7) 35%,
+      rgba(4,7,12,.5) 60%,
+      rgba(4,7,12,.85) 100%
+    );
+  pointer-events:none;
+}
+
+.read-role-content{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:16px 20px;
+  width:100%;
+}
+
 .read-role-label{
-  flex:0 0 70px;
+  flex:0 0 78px;
   font-size:10px;
   font-weight:800;
-  letter-spacing:.16em;
-  color:var(--muted);
+  letter-spacing:.18em;
+  color:var(--primary);
   text-transform:uppercase;
+  text-shadow:0 0 10px rgba(74,158,255,.5);
 }
+
 .read-role-champ{
   flex:1;
-  font-size:14.5px;
-  font-weight:600;
-  color:var(--silver);
-  letter-spacing:.01em;
+  font-size:20px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:.02em;
+  text-shadow:
+    0 2px 6px rgba(0,0,0,.9),
+    0 0 20px rgba(0,0,0,.6);
+  line-height:1.15;
 }
+
 .read-role-champ.empty{
   color:var(--muted);
   font-style:italic;
   font-weight:400;
+  font-size:15px;
+  text-shadow:none;
 }
 
-.read-description{
-  font-size:13.5px;
-  line-height:1.75;
-  color:var(--silver-2);
-  white-space:pre-wrap;
-  word-break:break-word;
+/* Linha sem campeão (vazia) */
+.read-role-row.empty{
   background:#070d16;
-  border:1px solid var(--border-soft);
-  border-radius:6px;
-  padding:16px 20px;
+  min-height:64px;
 }
-.read-description.empty{
-  color:var(--muted);
-  font-style:italic;
-  text-align:center;
-  padding:24px 20px;
-}
-.read-description.empty i{
-  color:var(--primary);
-  opacity:.5;
-  margin-right:6px;
+.read-role-row.empty .read-role-content{
+  padding:12px 20px;
 }
 
 /* Responsivo */
 @media(max-width:640px){
-  .read-body{padding:16px !important}
-  .read-role-row{padding:9px 12px;gap:10px}
+  .read-role-row{min-height:72px}
+  .read-role-row.empty{min-height:56px}
+  .read-role-content{padding:12px 14px;gap:12px}
   .read-role-label{flex:0 0 60px;font-size:9.5px}
-  .read-role-champ{font-size:13px}
-  .read-description{font-size:12.5px;padding:14px 16px}
+  .read-role-champ{font-size:16px}
+  .read-role-splash{background-position:center 20%}
 }

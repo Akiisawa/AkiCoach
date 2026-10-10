@@ -5,7 +5,7 @@ import {
 import { toast, toastIcon } from './ui.js';
 import {
   getAccountByRiotId, getSummonerByPuuid, getRankedStats,
-  getChampionMastery, fetchPlayerStats, setCachedStats
+  getChampionMastery, fetchPlayerStats, setCachedStats, champIconName
 } from './riot-api.js';
 import { setPlayerIndex, removePlayerIndex, dbUpdate } from './firebase.js';
 
@@ -868,11 +868,23 @@ export function modalViewComp(id) {
   const meta = statusMeta[c.status] || statusMeta.testar;
   const champs = c.champs || {};
 
-  const roleRow = (label, champ) => `
-    <div class="read-role-row">
-      <span class="read-role-label">${label}</span>
-      <span class="read-role-champ ${champ ? '' : 'empty'}">${champ ? esc(champ) : '—'}</span>
+  const splashUrl = (name) =>
+    `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champIconName(name)}_0.jpg`;
+
+  const roleRow = (label, champ) => {
+    const hasChamp = !!champ;
+    return `
+    <div class="read-role-row ${hasChamp ? '' : 'empty'}">
+      ${hasChamp ? `
+        <div class="read-role-splash" style="background-image:url('${splashUrl(champ)}')"></div>
+        <div class="read-role-overlay"></div>
+      ` : ''}
+      <div class="read-role-content">
+        <span class="read-role-label">${label}</span>
+        <span class="read-role-champ ${hasChamp ? '' : 'empty'}">${hasChamp ? esc(champ) : '—'}</span>
+      </div>
     </div>`;
+  };
 
   const root = $('#modal-root');
   root.innerHTML = `
