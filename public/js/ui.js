@@ -6,6 +6,16 @@ import { champIconName } from './riot-api.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 
+const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1';
+const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn/14.1.1';
+
+function profileIconUrl(id) {
+  return `${CDRAGON}/profile-icons/${id}.jpg`;
+}
+function championIconUrl(name) {
+  return `${DDRAGON}/img/champion/${champIconName(name)}.png`;
+}
+
 export function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
@@ -44,9 +54,11 @@ function safePool(p) {
   return Array.isArray(p?.pool) ? p.pool : [];
 }
 
-/* ═══════════════════════════════════════
-   VIEW: DASHBOARD
-   ═══════════════════════════════════════ */
+function canEditPool(pid) {
+  if (!isPlayerMode()) return true;
+  return pid === window.__akiCurrentPlayer;
+}
+
 export function viewDash() {
   const rec = scrimRecord();
   const titulares = state.players.filter(p => p.status === 'titular');
@@ -292,43 +304,60 @@ export function playerCardHTML(p) {
   const sorted = [...safe.pool].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
   const hasRiot = safe.riot.gameName && safe.riot.puuid;
   const riotPartial = safe.riot.gameName && !safe.riot.puuid;
+  const hasIcon = hasRiot && safe.riot.iconId;
 
-  const riotLine = hasRiot
-    ? `<i class="fa-solid fa-gamepad"></i> ${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)}
-       ${safe.riot.rank ? `<span style="color:var(--muted)"> · ${esc(safe.riot.rank)}</span>` : ''}
-       <span class="badge-riot"><i class="fa-solid fa-circle-check"></i> Riot</span>`
-    : riotPartial
-      ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f7bd4a"></i>
-         <span style="color:#f7bd4a">${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)} · sem dados</span>`
-      : '';
+  /* ── Pool: mostra só 3 + "+N" ── */
+  const MAX_CHAMPS = 3;
+  const visibleChamps = sorted.slice(0, MAX_CHAMPS);
+  const extra = sorted.length - MAX_CHAMPS;
 
-  const poolHTML = sorted.length
-    ? sorted.slice(0, 9).map(c =>
-        `<span class="champ-mini ${esc((c.tier || 'c').toLowerCase())}">${esc(c.champ)} <b style="opacity:.65">${esc(c.tier)}</b></span>`
-      ).join('')
-      + (sorted.length > 9 ? `<span class="champ-mini">+${sorted.length - 9}</span>` : '')
-    : `<span class="champ-mini empty">Sem campeões na pool</span>`;
+  const champsHTML = sorted.length
+    ? visibleChamps.map(c =>
+        `<span class="champ-mini ${esc((c.tier || 'c').toLowerCase())}" title="${esc(c.champ)} · Tier ${esc(c.tier)}">
+          ${esc(c.champ)} <b style="opacity:.65">${esc(c.tier)}</b>
+        </span>`
+      ).join('') +
+      (extra > 0
+        ? `<span class="champ-mini more" title="${sorted.slice(MAX_CHAMPS).map(c => `${c.champ} (${c.tier})`).join(', ')}">+${extra}</span>`
+        : '')
+    : `<span class="champ-mini empty">Sem campeões</span>`;
 
-  const avatarHTML = (hasRiot && safe.riot.iconId)
-    ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${esc(safe.riot.iconId)}.png" alt="">`
-    : esc(initials);
+  /* ── Riot info em 2 rows ── */
+  const riotInfoHTML = (hasRiot || riotPartial) ? `
+    <div class="riot-info">
+      <div class="riot-line-1" title="${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)}">
+        <i class="fa-solid fa-gamepad"></i>
+        <span class="riot-name">${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)}</span>
+        ${hasRiot
+          ? `<span class="badge-riot ok" title="Conta vinculada"><i class="fa-solid fa-circle-check"></i></span>`
+          : `<span class="badge-riot warn" title="Conta sem dados"><i class="fa-solid fa-triangle-exclamation"></i></span>`}
+      </div>
+      ${hasRiot && safe.riot.rank ? `
+        <div class="riot-line-2" title="${esc(safe.riot.rank)}">
+          <i class="fa-solid fa-ranking-star"></i>
+          <span class="riot-rank">${esc(safe.riot.rank)}</span>
+        </div>` : ''}
+    </div>` : `<div class="riot-info empty"></div>`;
 
   return `<div class="player-card">
     <div class="role-tag"><i class="fa-solid ${roleIcon(safe.role)}"></i> ${esc(safe.role)}</div>
     <div class="top">
-      <div class="avatar">${avatarHTML}</div>
+      <div class="avatar">
+        <span class="avatar-initials">${esc(initials)}</span>
+        ${hasIcon ? `<img src="${profileIconUrl(safe.riot.iconId)}" alt="" onerror="this.remove()">` : ''}
+      </div>
       <div style="flex:1;min-width:0">
         <div class="nick">${esc(safe.nick)}</div>
         <div class="sub">${esc(safe.name || roleName(safe.role))}</div>
         <div style="margin-top:6px"><span class="pill ${esc(safe.status)}">${esc(safe.status)}</span></div>
       </div>
     </div>
-    <div class="riot-line ${riotLine ? '' : 'empty'}">${riotLine || ''}</div>
+    ${riotInfoHTML}
     <div class="pool-header">
       <span>Pool</span>
       <span class="count">${safe.pool.length}</span>
     </div>
-    <div class="champ-mini-list">${poolHTML}</div>
+    <div class="champ-mini-list">${champsHTML}</div>
     <div class="card-actions">
       <button class="btn sm primary" data-act="open-player-detail" data-id="${esc(safe.id)}" style="flex:1;justify-content:center">
         <i class="fa-solid fa-chart-line"></i> Dashboard
@@ -378,7 +407,7 @@ export function viewPools() {
       ${TIERS.map(t => `<span style="padding:4px 10px;border-radius:6px;background:#101823;border:1px solid var(--border)">
         <b class="tier ${t}" style="display:inline-grid;width:18px;height:18px;font-size:10px;vertical-align:middle;margin-right:5px">${t}</b>${byTier(t).length}</span>`).join('')}
     </div>
-    ${!playerMode ? `<button class="btn primary" data-act="new-champ" data-pid="${p.id}"><i class="fa-solid fa-plus"></i> Campeão</button>` : ''}
+    ${canEditPool(p.id) ? `<button class="btn primary" data-act="new-champ" data-pid="${p.id}"><i class="fa-solid fa-plus"></i> Campeão</button>` : ''}
   </div>
   ${p.pool.length ? TIERS.filter(t => byTier(t).length).map(t => `
     <div style="margin-bottom:22px">
@@ -407,7 +436,7 @@ export function champCardHTML(c, pid) {
     ${c.notes?`<div class="champ-notes">${esc(c.notes)}</div>`:''}
     <div style="display:flex;gap:4px;margin-top:auto;padding-top:9px;border-top:1px solid var(--border-soft)">
       <div style="flex:1"></div>
-      ${!playerMode ? `
+      ${canEditPool(pid) ? `
         <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
         <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
     </div>
@@ -688,7 +717,6 @@ export function viewPlayerDetail() {
   const hasRiot = riot.gameName && riot.puuid;
   const partial = riot.gameName && !riot.puuid;
   const stats = riot.stats;
-  const iconUrl = riot.iconId ? `https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${riot.iconId}.png` : null;
   const playerMode = isPlayerMode();
 
   return `
@@ -698,7 +726,8 @@ export function viewPlayerDetail() {
     </div>` : ''}
   <div class="pd-hero">
     <div class="pd-avatar">
-      ${iconUrl ? `<img src="${iconUrl}" alt="">` : `<span>${esc(p.nick.slice(0,2).toUpperCase())}</span>`}
+      <span class="avatar-initials">${esc(p.nick.slice(0,2).toUpperCase())}</span>
+      ${riot.iconId ? `<img src="${profileIconUrl(riot.iconId)}" alt="" onerror="this.remove()">` : ''}
       ${riot.level ? `<div class="pd-level">${riot.level}</div>` : ''}
     </div>
     <div class="pd-info">
@@ -783,7 +812,7 @@ function renderStats(s) {
       ${s.champions.length ? `<div style="display:flex;flex-direction:column;gap:9px">
         ${s.champions.slice(0, 8).map(c => `
           <div class="champ-bar">
-            <img class="champ-icon" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(c.champion)}.png"
+            <img class="champ-icon" src="${championIconUrl(c.champion)}"
                  onerror="this.style.visibility='hidden'" alt="">
             <div style="flex:1;min-width:0">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -840,7 +869,7 @@ function renderStats(s) {
       ${s.matches.map(m => `
         <div class="match-row ${m.win ? 'win' : 'loss'}">
           <div class="match-result">${m.win ? 'W' : 'L'}</div>
-          <img class="champ-icon-sm" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(m.champion)}.png"
+          <img class="champ-icon-sm" src="${championIconUrl(m.champion)}"
                onerror="this.style.visibility='hidden'" alt="">
           <div class="match-champ">${esc(m.champion)}</div>
           <div class="match-kda"><b>${m.kills}</b> / <span style="color:#ff9b9b">${m.deaths}</span> / <b>${m.assists}</b></div>

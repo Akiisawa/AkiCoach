@@ -71,7 +71,7 @@ function renderNav() {
     roster: state.players.length,
     scrims: state.scrims.length,
     notes: state.notes.length,
-    tasks: state.tasks.filter(t => !t.done).length,
+    agenda: state.events.filter(e => e.date >= TODAY).length,
     opponents: state.opponents.length
   };
   $('#nav').innerHTML = views.map(v => `

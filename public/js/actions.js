@@ -521,7 +521,6 @@ export function bindActions() {
     const coachOnly = [
       'new-event', 'edit-event', 'del-event',
       'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
-      'new-champ', 'edit-champ', 'del-champ',
       'new-scrim', 'edit-scrim', 'del-scrim',
       'save-draft', 'clear-draft', 'load-draft', 'del-draft',
       'new-note', 'edit-note', 'del-note',
@@ -529,9 +528,19 @@ export function bindActions() {
       'new-opponent', 'edit-opponent', 'del-opponent',
       'export', 'import', 'logout'
     ];
-    if (isPlayerMode() && coachOnly.includes(act)) {
-      toastIcon('Ação restrita ao coach', 'fa-lock');
-      return;
+    if (isPlayerMode()) {
+      if (coachOnly.includes(act)) {
+        toastIcon('Ação restrita ao coach', 'fa-lock');
+        return;
+      }
+      // Jogador pode editar apenas a própria pool
+      if (['new-champ', 'edit-champ', 'del-champ'].includes(act)) {
+        const pid = t.dataset.pid;
+        if (!pid || pid !== window.__akiCurrentPlayer) {
+          toastIcon('Você só pode editar sua própria pool', 'fa-lock');
+          return;
+        }
+      }
     }
 
     switch (act) {
