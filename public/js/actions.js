@@ -526,6 +526,7 @@ export function bindActions() {
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',
       'new-opponent', 'edit-opponent', 'del-opponent',
+      'comp-approve', 'comp-reject', 'comp-test',   // ⬅ só coach muda status
       'export', 'import', 'logout'
     ];
     if (isPlayerMode()) {
@@ -533,11 +534,17 @@ export function bindActions() {
         toastIcon('Ação restrita ao coach', 'fa-lock');
         return;
       }
-      // Jogador pode editar apenas a própria pool
       if (['new-champ', 'edit-champ', 'del-champ'].includes(act)) {
         const pid = t.dataset.pid;
         if (!pid || pid !== window.__akiCurrentPlayer) {
           toastIcon('Você só pode editar sua própria pool', 'fa-lock');
+          return;
+        }
+      }
+      if (['edit-comp', 'del-comp'].includes(act)) {
+        const comp = (state.comps || []).find(x => x.id === id);
+        if (!comp || comp.authorId !== window.__akiCurrentPlayer) {
+          toastIcon('Você só pode editar suas composições', 'fa-lock');
           return;
         }
       }
@@ -601,7 +608,29 @@ export function bindActions() {
         break;
       }
       case 'del-draft': state.drafts = state.drafts.filter(x => x.id !== id); save(); render(); toastIcon('Draft removido'); break;
-
+      
+            case 'new-comp': modalComp(); break;
+      case 'edit-comp': modalComp(id); break;
+      case 'del-comp': modalConfirm('Excluir composição', 'Remover esta composição?', () => {
+        state.comps = (state.comps || []).filter(x => x.id !== id);
+        save(); render(); toastIcon('Composição removida');
+      }); break;
+      case 'comp-approve': {
+        const c = (state.comps || []).find(x => x.id === id);
+        if (c) { c.status = 'aprovada'; c.updatedAt = Date.now(); save(); render(); toastIcon('Composição aprovada', 'fa-circle-check'); }
+        break;
+      }
+      case 'comp-reject': {
+        const c = (state.comps || []).find(x => x.id === id);
+        if (c) { c.status = 'recusada'; c.updatedAt = Date.now(); save(); render(); toastIcon('Composição recusada', 'fa-circle-xmark'); }
+        break;
+      }
+      case 'comp-test': {
+        const c = (state.comps || []).find(x => x.id === id);
+        if (c) { c.status = 'testar'; c.updatedAt = Date.now(); save(); render(); toastIcon('Marcada para testar', 'fa-flask'); }
+        break;
+      }
+      
       case 'new-note': modalNote(); break;
       case 'edit-note': modalNote(id); break;
       case 'del-note': modalConfirm('Excluir anotação', 'Remover esta anotação?', () => {
@@ -684,3 +713,98 @@ export function setPlayerLogoutHandler(fn) { playerLogoutHandler = fn; }
 
 function handleLogout() { if (logoutHandler) logoutHandler(); }
 function handlePlayerLogout() { if (playerLogoutHandler) playerLogoutHandler(); }
+
+/* ═══════════════════════════════════════
+   MODAL: Composição
+   ═══════════════════════════════════════ */
+export function modalComp(id) {
+  const playerMode = isPlayerMode();
+  const c = id ? (state.comps || []).find(x => x.id === id) : null;
+
+  // Autor/permissões
+  const authorNick = playerMode
+    ? (window.__akiPlayerNick || 'Jogador')
+    : (state.user?.displayName || state.user?.email?.split('@')[0] || 'Coach');
+  const authorId = playerMode ? (window.__akiCurrentPlayer || '') : '';
+
+  // Modo jogador não pode editar status
+  const canEditStatus = !playerMode;
+
+  const statusField = canEditStatus ? `
+    ${field('Status', `
+      <select name="status">
+        <option value="testar"   ${c?.status==='testar'   ?'selected':''}>Testar</option>
+        <option value="aprovada" ${c?.status==='aprovada' ?'selected':''}>Aprovada</option>
+        <option value="recusada" ${c?.status==='recusada' ?'selected':''}>Recusada</option>
+      </select>`)}
+  ` : `<input type="hidden" name="status" value="${esc(c?.status || 'testar')}">`;
+
+  const body = `
+    ${field('Nome da composição *', `<input name="name" required maxlength="60" value="${esc(c?.name || '')}" placeholder="Ex: Comp poke com Azir">`)}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${field('Top', `<input list="champ-list" name="TOP" value="${esc(c?.champs?.TOP || '')}" placeholder="Campeão...">`)}
+      ${field('Jungle', `<input list="champ-list" name="JNG" value="${esc(c?.champs?.JNG || '')}" placeholder="Campeão...">`)}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      ${field('Mid', `<input list="champ-list" name="MID" value="${esc(c?.champs?.MID || '')}" placeholder="Campeão...">`)}
+      ${field('ADC', `<input list="champ-list" name="ADC" value="${esc(c?.champs?.ADC || '')}" placeholder="Campeão...">`)}
+      ${field('Suporte', `<input list="champ-list" name="SUP" value="${esc(c?.champs?.SUP || '')}" placeholder="Campeão...">`)}
+    </div>
+
+    ${field('Descrição / Estratégia', `<textarea name="description" maxlength="600" placeholder="Como jogar, quando usar, pontos fortes e fracos...">${esc(c?.description || '')}</textarea>`)}
+
+    ${statusField}
+  `;
+
+  openModal({
+    title: c ? 'Editar Composição' : 'Nova Composição',
+    icon: 'fa-layer-group',
+    body, wide: true,
+    onSubmit: d => {
+      if (!d.name.trim()) {
+        toastIcon('Dê um nome à composição', 'fa-triangle-exclamation');
+        return false;
+      }
+
+      const champs = {
+        TOP: (d.TOP || '').trim(),
+        JNG: (d.JNG || '').trim(),
+        MID: (d.MID || '').trim(),
+        ADC: (d.ADC || '').trim(),
+        SUP: (d.SUP || '').trim(),
+      };
+
+      if (c) {
+        // Só o dono ou coach pode editar
+        if (playerMode && c.authorId !== authorId) {
+          toastIcon('Você só pode editar suas composições', 'fa-lock');
+          return false;
+        }
+        Object.assign(c, {
+          name: d.name.trim(),
+          description: (d.description || '').trim(),
+          champs,
+          updatedAt: Date.now(),
+        });
+        if (canEditStatus && d.status) c.status = d.status;
+      } else {
+        if (!Array.isArray(state.comps)) state.comps = [];
+        state.comps.push({
+          id: uid(),
+          name: d.name.trim(),
+          description: (d.description || '').trim(),
+          champs,
+          author: authorNick,
+          authorId,
+          status: canEditStatus && d.status ? d.status : 'testar',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+
+      save(); render();
+      toastIcon(c ? 'Composição atualizada' : 'Composição enviada');
+    }
+  });
+}

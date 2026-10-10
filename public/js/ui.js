@@ -4,6 +4,13 @@ import {
 } from './state.js';
 import { champIconName } from './riot-api.js';
 
+import {
+  viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
+  viewScrims, viewDraft, viewTasks, viewOpponents, viewNotes,
+  viewPlayerDetail, viewComps, bindDraft, toastIcon,
+  shiftCal, resetCal
+} from './ui.js';
+
 const $ = (s, r = document) => r.querySelector(s);
 
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1';
@@ -881,4 +888,97 @@ function renderStats(s) {
       `).join('')}
     </div>
   </div>`;
+}
+
+/* ═══════════════════════════════════════
+   VIEW: COMPS
+   ═══════════════════════════════════════ */
+export function viewComps() {
+  const playerMode = isPlayerMode();
+  const myId = window.__akiCurrentPlayer || null;
+
+  const list = [...(state.comps || [])].sort((a, b) => {
+    // Ordem: testar primeiro, depois aprovada, recusada por último
+    const order = { testar: 0, aprovada: 1, recusada: 2 };
+    const d = (order[a.status] ?? 3) - (order[b.status] ?? 3);
+    if (d !== 0) return d;
+    return (b.updatedAt || 0) - (a.updatedAt || 0);
+  });
+
+  const statusMeta = {
+    testar:   { label: 'Testar',   color: '#f7bd4a', icon: 'fa-flask' },
+    aprovada: { label: 'Aprovada', color: '#5ee08c', icon: 'fa-circle-check' },
+    recusada: { label: 'Recusada', color: '#ff9b9b', icon: 'fa-circle-xmark' },
+  };
+
+  const roleLine = (label, role, champ) => `
+    <div class="comp-role">
+      <span class="comp-role-label">${label}</span>
+      <span class="comp-role-champ">${champ ? esc(champ) : '—'}</span>
+    </div>`;
+
+  const cardHTML = (c) => {
+    const meta = statusMeta[c.status] || statusMeta.testar;
+    const isOwner = !playerMode || c.authorId === myId;
+    const isCoach = !playerMode;
+    const champs = c.champs || {};
+
+    return `<div class="comp-card">
+      <div class="comp-card-head">
+        <div style="flex:1;min-width:0">
+          <div class="comp-title">${esc(c.name || 'Sem nome')}</div>
+          <div class="comp-author">
+            <i class="fa-solid fa-user-pen"></i>
+            ${esc(c.author || 'Anônimo')}
+          </div>
+        </div>
+        <span class="comp-status" style="color:${meta.color};border-color:${meta.color}40;background:${meta.color}15">
+          <i class="fa-solid ${meta.icon}"></i> ${meta.label}
+        </span>
+      </div>
+
+      <div class="comp-roles">
+        ${roleLine('TOP', 'TOP', champs.TOP)}
+        ${roleLine('JNG', 'JNG', champs.JNG)}
+        ${roleLine('MID', 'MID', champs.MID)}
+        ${roleLine('ADC', 'ADC', champs.ADC)}
+        ${roleLine('SUP', 'SUP', champs.SUP)}
+      </div>
+
+      ${c.description ? `<div class="comp-desc">${esc(c.description)}</div>` : ''}
+
+      <div class="comp-actions">
+        ${isCoach && c.status !== 'aprovada' ? `
+          <button class="btn sm" data-act="comp-approve" data-id="${c.id}" title="Aprovar">
+            <i class="fa-solid fa-circle-check"></i> Aprovar
+          </button>` : ''}
+        ${isCoach && c.status !== 'recusada' ? `
+          <button class="btn sm" data-act="comp-reject" data-id="${c.id}" title="Recusar">
+            <i class="fa-solid fa-circle-xmark"></i> Recusar
+          </button>` : ''}
+        ${isCoach && c.status !== 'testar' ? `
+          <button class="btn sm" data-act="comp-test" data-id="${c.id}" title="Voltar a testar">
+            <i class="fa-solid fa-flask"></i> Testar
+          </button>` : ''}
+        <div style="flex:1"></div>
+        ${isOwner ? `
+          <button class="icon-btn" data-act="edit-comp" data-id="${c.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" data-act="del-comp" data-id="${c.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+        ` : ''}
+      </div>
+    </div>`;
+  };
+
+  return `
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <button class="btn primary" data-act="new-comp"><i class="fa-solid fa-plus"></i> Nova Composição</button>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:10px;font-size:11.5px;color:var(--muted)">
+      <span><i class="fa-solid fa-flask" style="color:#f7bd4a"></i> Testar</span>
+      <span><i class="fa-solid fa-circle-check" style="color:#5ee08c"></i> Aprovada</span>
+      <span><i class="fa-solid fa-circle-xmark" style="color:#ff9b9b"></i> Recusada</span>
+    </div>
+  </div>
+  ${list.length ? `<div class="grid g-auto">${list.map(cardHTML).join('')}</div>`
+    : `<div class="empty"><i class="fa-solid fa-layer-group" style="font-size:26px;opacity:.4"></i><br>Nenhuma composição ainda. ${playerMode ? 'Envie a sua!' : 'Crie a primeira.'}</div>`}`;
 }

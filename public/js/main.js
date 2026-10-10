@@ -15,7 +15,7 @@ import {
   modalConfirm, closeModal
 } from './actions.js';
 import {
-  auth, signIn, signUp, logOut, onAuth, dbGet, dbSet,
+  auth, signIn, logOut, onAuth, dbGet, dbSet,
   getPlayerIndex
 } from './firebase.js';
 
@@ -29,6 +29,7 @@ const VIEWS = [
   { id:'matrix', icon:'fa-table', label:'Matriz do Time' },
   { id:'scrims', icon:'fa-flag', label:'Scrims' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
+  { id:'comps', icon:'fa-layer-group', label:'Composições' },
   { id:'tasks', icon:'fa-list-check', label:'Tarefas' },
   { id:'opponents', icon:'fa-binoculars', label:'Scouting' },
   { id:'notes', icon:'fa-pen', label:'Anotações' }
@@ -54,6 +55,7 @@ const TITLES = {
   matrix: ['Matriz do Time', 'Cobertura de campeões do roster'],
   scrims: ['Scrims', 'Histórico e resultados de treinos'],
   draft: ['Draft Board', 'Simulador de picks e bans'],
+  comps: ['Composições', 'Comps do time para testar e aprovar'],
   tasks: ['Tarefas', 'Homework e metas individuais'],
   opponents: ['Scouting', 'Análise de oponentes'],
   notes: ['Anotações', 'Notas do coach e feedbacks'],
@@ -108,6 +110,7 @@ function renderView() {
     case 'matrix': v.innerHTML = viewMatrix(); break;
     case 'scrims': v.innerHTML = viewScrims(); break;
     case 'draft': v.innerHTML = viewDraft(); bindDraft(); break;
+    case 'comps': v.innerHTML = viewComps(); break;
     case 'tasks': v.innerHTML = viewTasks(); break;
     case 'opponents': v.innerHTML = viewOpponents(); break;
     case 'notes': v.innerHTML = viewNotes(); break;
@@ -181,18 +184,8 @@ function showPlayerApp(session) {
 
 function bindAuthForm() {
   const form = $('#auth-form');
-  const toggle = $('#auth-toggle');
   const submit = $('#auth-submit');
   const errEl = $('#auth-error');
-
-  toggle.addEventListener('click', () => {
-    isSignUp = !isSignUp;
-    submit.innerHTML = isSignUp
-      ? '<i class="fa-solid fa-user-plus"></i> Criar conta'
-      : '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
-    toggle.textContent = isSignUp ? 'Já tenho conta' : 'Criar conta';
-    errEl.textContent = '';
-  });
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -200,25 +193,21 @@ function bindAuthForm() {
     const email = $('#auth-email').value.trim();
     const pass = $('#auth-password').value;
     submit.disabled = true;
-    submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando...';
+    submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Entrando...';
     try {
-      if (isSignUp) await signUp(email, pass, email.split('@')[0]);
-      else await signIn(email, pass);
+      await signIn(email, pass);
     } catch (err) {
       const map = {
-        'auth/email-already-in-use': 'Este email já está em uso.',
         'auth/invalid-email': 'Email inválido.',
-        'auth/weak-password': 'Senha muito fraca (mín. 6 caracteres).',
         'auth/user-not-found': 'Usuário não encontrado.',
         'auth/wrong-password': 'Senha incorreta.',
-        'auth/invalid-credential': 'Email ou senha inválidos.'
+        'auth/invalid-credential': 'Email ou senha inválidos.',
+        'auth/too-many-requests': 'Muitas tentativas. Tente novamente em alguns minutos.'
       };
       errEl.textContent = map[err.code] || err.message;
     } finally {
       submit.disabled = false;
-      submit.innerHTML = isSignUp
-        ? '<i class="fa-solid fa-user-plus"></i> Criar conta'
-        : '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
+      submit.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar';
     }
   });
 }

@@ -1,5 +1,10 @@
 import { dbGet, dbSet, dbListen } from './firebase.js';
 
+import {
+  state, ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
+  hashPin, generatePin
+} from './state.js';
+
 export const ROLES = [
   { id:'TOP', name:'Topo', icon:'fa-shield-halved' },
   { id:'JNG', name:'Caçador', icon:'fa-tree' },
@@ -64,6 +69,7 @@ export const state = {
     blue: { bans:['','','','',''], picks:['','','','',''] },
     red: { bans:['','','','',''], picks:['','','','',''] }
   },
+  comps: [],
   notes: [],
   tasks: [],
   opponents: [],
@@ -108,6 +114,20 @@ export function seedData() {
       { id:uid(), date:off(-4), opponent:'Time B', result:'L', score:'1-3', format:'Bo5', notes:'Perdemos early nas 3 derrotas.' }
     ],
     drafts: [],
+        comps: [
+      {
+        id: uid(), name: 'Comp poke com Azir', author: 'Akisawa', authorId: '',
+        description: 'Foco em siege com Azir mid, poke de Caitlyn e disengage com Rakan. Testar contra comps de dive.',
+        champs: { TOP:'Aatrox', JNG:'Sejuani', MID:'Azir', ADC:'Caitlyn', SUP:'Rakan' },
+        status: 'testar', createdAt: Date.now(), updatedAt: Date.now()
+      },
+      {
+        id: uid(), name: 'Comp dive early', author: 'Coach', authorId: '',
+        description: 'Renekton + Vi pra forçar early game e snowball. Fraco contra poke.',
+        champs: { TOP:'Renekton', JNG:'Vi', MID:'Ahri', ADC:'Kai\'Sa', SUP:'Nautilus' },
+        status: 'aprovada', createdAt: Date.now(), updatedAt: Date.now()
+      }
+    ],
     notes: [
       { id:uid(), title:'Prioridades da semana', body:'Melhorar drake control\nFixar pool de SUP em 3 campeões\nRevisar teamfights', tag:'Time', date:off(0) }
     ],
@@ -148,6 +168,7 @@ export async function loadFromFirebase(uid) {
   state.events = data.events ? Object.values(data.events) : [];
   state.scrims = data.scrims ? Object.values(data.scrims) : [];
   state.drafts = data.drafts ? Object.values(data.drafts) : [];
+  state.comps = data.comps ? Object.values(data.comps) : [];
   state.notes = data.notes ? Object.values(data.notes) : [];
   state.tasks = data.tasks ? Object.values(data.tasks) : [];
   state.opponents = data.opponents ? Object.values(data.opponents) : [];
@@ -163,6 +184,7 @@ export async function saveToFirebase() {
     events: state.events,
     scrims: state.scrims,
     drafts: state.drafts,
+    comps: state.comps,
     notes: state.notes,
     tasks: state.tasks,
     opponents: state.opponents,
@@ -179,6 +201,7 @@ export function listenTeam(uid, cb) {
     if (data.events) state.events = Object.values(data.events);
     if (data.scrims) state.scrims = Object.values(data.scrims);
     if (data.drafts) state.drafts = Object.values(data.drafts);
+    if (data.comps) state.comps = Object.values(data.comps);
     if (data.notes) state.notes = Object.values(data.notes);
     if (data.tasks) state.tasks = Object.values(data.tasks);
     if (data.opponents) state.opponents = Object.values(data.opponents);

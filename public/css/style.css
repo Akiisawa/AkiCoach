@@ -951,3 +951,62 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   .pl-inner::before{width:440px;height:440px}
   .pl-inner::after{width:300px;height:300px}
 }
+
+/* ═══ COMPOSIÇÕES ═══ */
+.comp-card{
+  background:linear-gradient(165deg,#0a121e,#060b14);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:15px;display:flex;flex-direction:column;gap:10px;
+  transition:.18s;position:relative;
+}
+.comp-card:hover{
+  border-color:rgba(74,158,255,.5);
+  box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 20px rgba(74,158,255,.12);
+}
+.comp-card-head{display:flex;align-items:flex-start;gap:10px}
+.comp-title{
+  font-size:15px;font-weight:800;color:var(--silver);
+  letter-spacing:.02em;line-height:1.25;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.comp-author{
+  font-size:11px;color:var(--muted);margin-top:3px;
+  display:flex;align-items:center;gap:5px;
+}
+.comp-author i{font-size:10px;color:var(--primary);opacity:.7}
+.comp-status{
+  flex:0 0 auto;font-size:10px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 9px;border-radius:20px;border:1px solid;
+  display:inline-flex;align-items:center;gap:5px;
+  white-space:nowrap;
+}
+.comp-status i{font-size:10px}
+
+.comp-roles{
+  display:flex;flex-direction:column;gap:4px;
+  padding:10px 0;border-top:1px solid var(--border-soft);
+  border-bottom:1px solid var(--border-soft);
+}
+.comp-role{display:flex;align-items:center;gap:8px;font-size:12px}
+.comp-role-label{
+  flex:0 0 36px;font-size:9.5px;font-weight:800;
+  letter-spacing:.14em;color:var(--muted);text-transform:uppercase;
+}
+.comp-role-champ{
+  flex:1;min-width:0;font-weight:600;color:var(--silver);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.comp-desc{
+  font-size:12px;color:var(--silver-2);line-height:1.55;
+  white-space:pre-wrap;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.comp-actions{
+  display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  padding-top:10px;border-top:1px solid var(--border-soft);
+  margin-top:auto;
+}
