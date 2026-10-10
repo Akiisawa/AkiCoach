@@ -292,7 +292,7 @@ export function modalTeam() {
       ${field('Nome do time', `<input name="name" value="${esc(state.team.name)}" maxlength="40">`)}
       ${field('Tag', `<input name="tag" value="${esc(state.team.tag)}" maxlength="6">`)}
     </div>
-    ${field('Seu nome (aparece como autor das composições)', `
+    ${field('Seu nome (aparece no menu e nas composições)', `
       <input name="coachName" value="${esc(state.coachName || '')}" maxlength="30" placeholder="Ex: Akisawa">
     `)}
     <div style="font-size:11px;color:var(--muted);margin-top:-6px">
@@ -302,36 +302,40 @@ export function modalTeam() {
   openModal({
     title: 'Editar Time', icon: 'fa-gear', body,
     onSubmit: async d => {
-      const oldCoachName = state.coachName;
-      const newCoachName = (d.coachName || '').trim() || 'Coach';
+      const oldName = state.coachName;
+      const newName = (d.coachName || '').trim() || 'Coach';
 
       state.team.name = d.name.trim() || 'Time';
       state.team.tag = (d.tag.trim() || 'TAG').toUpperCase();
-      state.coachName = newCoachName;
+      state.coachName = newName;
 
-      // Atualiza perfil no Firebase
+      // Salva no perfil do Firebase
       if (state.user?.uid) {
         try {
           await dbUpdate(`users/${state.user.uid}/profile`, {
-            displayName: newCoachName
+            displayName: newName
           });
         } catch (e) {
-          console.warn('Falha ao atualizar perfil no Firebase:', e);
+          console.warn('Falha ao atualizar perfil:', e);
         }
       }
 
-      // Atualiza composições antigas criadas pelo coach
-      if (oldCoachName && oldCoachName !== newCoachName && Array.isArray(state.comps)) {
+      // Atualiza o sidebar imediatamente
+      const userNameEl = document.getElementById('user-name');
+      if (userNameEl) userNameEl.textContent = newName;
+
+      // Renomeia comps antigas do coach
+      if (oldName && oldName !== newName && Array.isArray(state.comps)) {
         let changed = 0;
         state.comps.forEach(c => {
-          if (c.authorId === '' && c.author === oldCoachName) {
-            c.author = newCoachName;
+          if (c.authorId === '' && c.author === oldName) {
+            c.author = newName;
             changed++;
           }
         });
         if (changed > 0) {
-          toastIcon(`Time atualizado · ${changed} composição(ões) renomeadas`);
           save(); render();
+          toastIcon(`Nome atualizado · ${changed} composição(ões) renomeadas`);
           return;
         }
       }

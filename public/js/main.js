@@ -278,18 +278,18 @@ async function initApp(user) {
   state.teamUid = user.uid;
 
   const profile = await dbGet(`users/${user.uid}/profile`);
+  const fallbackName = user.displayName || user.email.split('@')[0];
   if (!profile) {
-    const defaultName = user.displayName || user.email.split('@')[0];
     await dbSet(`users/${user.uid}/profile`, {
       email: user.email,
-      displayName: defaultName,
+      displayName: fallbackName,
       role: 'head_coach',
       createdAt: Date.now()
     });
     await dbSet(`users/${user.uid}/teams`, { [user.uid]: true });
-    state.coachName = defaultName;
+    state.coachName = fallbackName;
   } else {
-    state.coachName = profile.displayName || user.email.split('@')[0];
+    state.coachName = profile.displayName || fallbackName;
   }
 
   const hasData = await loadFromFirebase(user.uid);
@@ -300,7 +300,7 @@ async function initApp(user) {
   }
 
   listenTeam(user.uid, () => { renderNav(); renderView(); });
-  $('#user-name').textContent = user.displayName || user.email.split('@')[0];
+  $('#user-name').textContent = state.coachName;
 
   const savedTheme = localStorage.getItem('aki_theme') || 'dark';
   state.theme = savedTheme;
