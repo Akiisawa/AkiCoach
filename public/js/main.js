@@ -279,13 +279,17 @@ async function initApp(user) {
 
   const profile = await dbGet(`users/${user.uid}/profile`);
   if (!profile) {
+    const defaultName = user.displayName || user.email.split('@')[0];
     await dbSet(`users/${user.uid}/profile`, {
       email: user.email,
-      displayName: user.displayName || user.email.split('@')[0],
+      displayName: defaultName,
       role: 'head_coach',
       createdAt: Date.now()
     });
     await dbSet(`users/${user.uid}/teams`, { [user.uid]: true });
+    state.coachName = defaultName;
+  } else {
+    state.coachName = profile.displayName || user.email.split('@')[0];
   }
 
   const hasData = await loadFromFirebase(user.uid);

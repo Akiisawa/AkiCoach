@@ -56,6 +56,7 @@ export const CHAMPS = [
 export const state = {
   user: null,
   teamUid: null,
+  coachName: '',
   team: { name:'Meu Time', tag:'TAG' },
   players: [],
   events: [],
