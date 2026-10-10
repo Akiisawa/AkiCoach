@@ -1,0 +1,752 @@
+import {
+  state, ROLES, ROLE_ORDER, roleName, roleIcon, EVENT_TYPES, TIERS, PICK_TYPES, MOODS,
+  pad, fmtShort, WEEK, MONTHS, TODAY, dateKey, parseKey, esc
+} from './state.js';
+import { champIconName } from './riot-api.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+
+export function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+export function toastIcon(msg, icon = 'fa-circle-check') {
+  const t = $('#toast');
+  t.innerHTML = `<i class="fa-solid ${icon}"></i> ${esc(msg)}`;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+export const upcoming = (n = 5) => state.events
+  .filter(e => e.date >= TODAY)
+  .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time))
+  .slice(0, n);
+
+export const eventsOn = k => state.events.filter(e => e.date === k);
+export const poolCount = (p, tiers = TIERS) => p.pool.filter(c => tiers.includes(c.tier)).length;
+export const scrimRecord = () => {
+  const w = state.scrims.filter(s => s.result === 'W').length;
+  const l = state.scrims.filter(s => s.result === 'L').length;
+  return { w, l, total: state.scrims.length };
+};
+
+export function viewDash() {
+  const rec = scrimRecord();
+  const titulares = state.players.filter(p => p.status === 'titular');
+  const totalChamps = new Set(state.players.flatMap(p => p.pool.map(c => c.champ))).size;
+  const alertas = titulares.filter(p => poolCount(p, ['S','A']) < 3);
+  const ups = upcoming(6);
+  const pendingTasks = state.tasks.filter(t => !t.done);
+
+  return `
+  <div class="grid g-4" style="margin-bottom:18px">
+    <div class="stat"><div class="lbl">Roster Ativo</div><div class="val">${titulares.length}</div><div class="note">${state.players.length} no total</div></div>
+    <div class="stat blue"><div class="lbl">Campeões Mapeados</div><div class="val">${totalChamps}</div><div class="note">em ${state.players.length} pools</div></div>
+    <div class="stat teal"><div class="lbl">Scrims Registradas</div><div class="val">${rec.total}</div><div class="note">${rec.w}V — ${rec.l}D</div></div>
+    <div class="stat ${rec.total ? (rec.w/Math.max(rec.total,1)>=.5?'green':'red') : ''}">
+      <div class="lbl">Winrate Scrim</div>
+      <div class="val">${rec.total ? Math.round(rec.w/rec.total*100)+'%' : '—'}</div>
+      <div class="note">${rec.total ? 'nas partidas' : 'sem dados'}</div>
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-calendar-days"></i> Próximos Compromissos</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="agenda">Ver agenda</button>
+      </div>
+      ${ups.length ? `<div style="display:flex;flex-direction:column;gap:8px">${ups.map(evRowHTML).join('')}</div>`
+        : `<div class="empty"><i class="fa-solid fa-calendar-xmark" style="font-size:26px;opacity:.4"></i><br>Nenhum evento agendado.</div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-heart-pulse"></i> Saúde das Pools</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="pools">Gerenciar</button>
+      </div>
+      ${titulares.length ? `<div style="display:flex;flex-direction:column;gap:9px">
+        ${titulares.sort((a,b)=>ROLE_ORDER[a.role]-ROLE_ORDER[b.role]).map(p => {
+          const s = poolCount(p, ['S']), a = poolCount(p, ['A']);
+          const ok = s + a >= 3;
+          return `<div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar" style="width:30px;height:30px;flex:0 0 30px;font-size:12px;border-radius:7px">${esc(p.nick.slice(0,2).toUpperCase())}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600">${esc(p.nick)} <span style="color:var(--muted);font-weight:400;font-size:11px">· ${roleName(p.role)}</span></div>
+              <div style="height:4px;background:#18222f;border-radius:3px;margin-top:5px;overflow:hidden;display:flex">
+                <div style="width:${Math.min(s/6*100,100)}%;background:var(--gold)"></div>
+                <div style="width:${Math.min(a/6*100,100)}%;background:var(--teal)"></div>
+              </div>
+            </div>
+            <div style="font-size:11px;color:${ok?'var(--muted)':'#ff9b9b'};font-weight:700;white-space:nowrap">
+              ${s}S · ${a}A${ok?'':' <i class="fa-solid fa-triangle-exclamation"></i>'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : `<div class="empty">Sem titulares cadastrados.</div>`}
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-list-check"></i> Tarefas Pendentes</h3><div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="tasks">Ver todas</button></div>
+      ${pendingTasks.length ? `<div style="display:flex;flex-direction:column;gap:7px">
+        ${pendingTasks.slice(0,5).map(t => `
+          <div class="task-row">
+            <button class="task-check" data-act="toggle-task" data-id="${t.id}"><i class="fa-solid fa-check"></i></button>
+            <div class="task-title">${esc(t.title)}</div>
+            <div class="task-due">${t.assignee ? esc(t.assignee) + ' · ' : ''}${t.due ? fmtShort(t.due) : ''}</div>
+          </div>`).join('')}
+      </div>` : `<div class="empty"><i class="fa-solid fa-circle-check" style="font-size:26px;opacity:.4"></i><br>Nenhuma tarefa pendente.</div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-flag"></i> Últimos Resultados</h3><div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="scrims">Ver todos</button></div>
+      ${state.scrims.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+        ${[...state.scrims].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4).map(s => `
+          <div class="scrim-row" style="grid-template-columns:56px 1fr 60px auto">
+            <div class="res-badge res-${s.result}">${s.result}</div>
+            <div>
+              <div style="font-weight:600;font-size:13px">vs ${esc(s.opponent)}</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtShort(s.date)} · ${esc(s.format)}</div>
+            </div>
+            <div style="font-weight:800;color:var(--gold2);text-align:right">${esc(s.score)}</div>
+          </div>`).join('')}
+      </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}
+    </div>
+  </div>
+
+  <div class="grid g-2">
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-triangle-exclamation"></i> Alertas do Coach</h3></div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+        ${alertas.length ? alertas.map(p => `
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:8px">
+            <i class="fa-solid fa-triangle-exclamation" style="color:#f7bd4a;font-size:15px;margin-top:2px"></i>
+            <div><strong style="color:#f7bd4a">${esc(p.nick)}</strong> tem apenas <strong>${poolCount(p,['S','A'])}</strong> campeão(ões) em tier S/A.</div>
+          </div>`).join('') : `
+          <div style="display:flex;gap:10px;align-items:center;padding:10px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);border-radius:8px">
+            <i class="fa-solid fa-circle-check" style="color:#5ee08c;font-size:15px"></i>
+            <div>Todas as pools estão saudáveis.</div>
+          </div>`}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-face-smile"></i> Check-in de Humor</h3></div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Como está o time hoje?</div>
+      <div class="mood-row" data-player="team">
+        ${MOODS.map((m, i) => `<button class="mood-btn ${state.moods[TODAY]?.['team'] === i+1 ? 'selected' : ''}" data-act="set-mood" data-player="team" data-mood="${i+1}">${m}</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+export function evRowHTML(e) {
+  const t = EVENT_TYPES[e.type] || EVENT_TYPES.reuniao;
+  return `<div class="ev-row" style="border-left-color:${t.color}">
+    <div class="date" style="color:${t.color}">${fmtShort(e.date)}</div>
+    <div class="body">
+      <div class="title">${esc(e.title)}</div>
+      <div class="meta">${t.label}${e.time&&e.time!=='00:00'?' · '+e.time:''}${e.duration?' · '+e.duration+'min':''}${e.opponent?' · vs '+esc(e.opponent):''}</div>
+    </div>
+    <button class="icon-btn" data-act="edit-event" data-id="${e.id}"><i class="fa-solid fa-pen"></i></button>
+    <button class="icon-btn" data-act="del-event" data-id="${e.id}"><i class="fa-solid fa-trash"></i></button>
+  </div>`;
+}
+
+let calCursor = new Date();
+
+export function shiftCal(n) {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + n, 1);
+}
+
+export function resetCal() { calCursor = new Date(); }
+
+export function viewAgenda() {
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  const first = new Date(y, m, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const prevDays = new Date(y, m, 0).getDate();
+  const cells = [];
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(y, m-1, prevDays - i);
+    cells.push({ key: dateKey(d), day: d.getDate(), out: true });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ key: dateKey(new Date(y, m, d)), day: d, out: false });
+  }
+  while (cells.length % 7 !== 0) {
+    const last = parseKey(cells[cells.length-1].key);
+    last.setDate(last.getDate() + 1);
+    cells.push({ key: dateKey(last), day: last.getDate(), out: true });
+  }
+  const monthEvents = state.events
+    .filter(e => { const d = parseKey(e.date); return d.getFullYear()===y && d.getMonth()===m; })
+    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+
+  return `
+  <div class="cal-bar">
+    <button class="btn sm" data-act="cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="cal-month">${MONTHS[m]} ${y}</div>
+    <button class="btn sm" data-act="cal-next"><i class="fa-solid fa-chevron-right"></i></button>
+    <button class="btn sm ghost" data-act="cal-today">Hoje</button>
+    <div style="flex:1"></div>
+    <button class="btn primary" data-act="new-event" data-date="${TODAY}"><i class="fa-solid fa-plus"></i> Novo Evento</button>
+  </div>
+  <div class="cal-grid" style="margin-bottom:8px">${WEEK.map(w => `<div class="cal-dow">${w}</div>`).join('')}</div>
+  <div class="cal-grid">
+    ${cells.map(c => {
+      const evs = eventsOn(c.key);
+      const isToday = c.key === TODAY;
+      return `<div class="cal-day ${c.out?'out':''} ${isToday?'today':''}" data-act="new-event" data-date="${c.key}">
+        <div class="cal-daynum"><span>${c.day}</span>${evs.length?`<span style="color:var(--gold)">${evs.length}</span>`:''}</div>
+        ${evs.slice(0,3).map(e => {
+          const t = EVENT_TYPES[e.type] || EVENT_TYPES.reuniao;
+          return `<div class="cal-ev" style="border-left-color:${t.color}" data-act="edit-event" data-id="${e.id}" title="${esc(e.title)} — ${e.time}">
+            ${e.time !== '00:00' ? e.time + ' ' : ''}${esc(e.title)}</div>`;
+        }).join('')}
+        ${evs.length>3?`<div class="cal-more">+${evs.length-3} mais</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="legend">${Object.entries(EVENT_TYPES).map(([k,v]) => `<span><i style="background:${v.color}"></i>${v.label}</span>`).join('')}</div>
+
+  <div class="card" style="margin-top:22px">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-list"></i> Eventos de ${MONTHS[m]}</h3>
+      <div class="spacer"></div>
+      <span style="font-size:11.5px;color:var(--muted)">${monthEvents.length} evento(s)</span>
+    </div>
+    ${monthEvents.length ? `<div style="display:flex;flex-direction:column;gap:8px">${monthEvents.map(evRowHTML).join('')}</div>`
+      : `<div class="empty"><i class="fa-solid fa-calendar-xmark" style="font-size:26px;opacity:.4"></i><br>Nenhum evento neste mês.</div>`}
+  </div>`;
+}
+
+export function viewRoster() {
+  const order = { titular:0, reserva:1, staff:2, inativo:3 };
+  const ps = [...state.players].sort((a,b) =>
+    (order[a.status]-order[b.status]) || (ROLE_ORDER[a.role]-ROLE_ORDER[b.role]) || a.nick.localeCompare(b.nick));
+
+  return `
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <button class="btn primary" data-act="new-player"><i class="fa-solid fa-user-plus"></i> Adicionar Jogador</button>
+    <button class="btn" data-act="edit-team"><i class="fa-solid fa-gear"></i> Editar Time</button>
+    <div style="flex:1"></div>
+    <div style="font-size:12px;color:var(--muted)">
+      ${state.players.filter(p=>p.status==='titular').length} titulares ·
+      ${state.players.filter(p=>p.status==='reserva').length} reservas
+    </div>
+  </div>
+  ${ps.length ? `<div class="grid g-auto">${ps.map(playerCardHTML).join('')}</div>`
+    : `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Nenhum jogador cadastrado.</div>`}`;
+}
+
+export function playerCardHTML(p) {
+  const initials = p.nick.slice(0,2).toUpperCase();
+  const sorted = [...p.pool].sort((a,b) => TIERS.indexOf(a.tier)-TIERS.indexOf(b.tier));
+  const hasRiot = p.riot && p.riot.gameName;
+  return `<div class="player-card">
+    <div class="role-tag"><i class="fa-solid ${roleIcon(p.role)}"></i> ${p.role}</div>
+    <div class="top">
+      <div class="avatar">${hasRiot && p.riot.iconId ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${p.riot.iconId}.png" alt="">` : esc(initials)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="nick">${esc(p.nick)}</div>
+        <div class="sub">${esc(p.name || roleName(p.role))}</div>
+        <div style="margin-top:5px">
+          <span class="pill ${p.status}">${p.status}</span>
+          ${hasRiot ? `<span style="font-size:10px;color:var(--teal);margin-left:6px"><i class="fa-solid fa-circle-check"></i> Riot</span>` : ''}
+        </div>
+      </div>
+    </div>
+    ${hasRiot ? `<div style="font-size:11px;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-gamepad"></i> ${esc(p.riot.gameName)}#${esc(p.riot.tagLine)}${p.riot.rank ? ' · ' + esc(p.riot.rank) : ''}</div>` : ''}
+    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:700;margin-bottom:2px">
+      Pool (${p.pool.length})
+    </div>
+    ${sorted.length ? `<div class="champ-mini-list">
+      ${sorted.slice(0,8).map(c => `<span class="champ-mini ${c.tier.toLowerCase()}" title="${esc(PICK_TYPES[c.type]?.label||'')}">${esc(c.champ)} <b style="opacity:.65">${c.tier}</b></span>`).join('')}
+      ${sorted.length>8?`<span class="champ-mini">+${sorted.length-8}</span>`:''}
+    </div>` : `<div style="font-size:12px;color:var(--muted);font-style:italic">Sem campeões</div>`}
+    <div style="display:flex;gap:6px;margin-top:12px;padding-top:11px;border-top:1px solid var(--border-soft)">
+      <button class="btn sm primary" data-act="open-player-detail" data-id="${p.id}" style="flex:1;justify-content:center">
+        <i class="fa-solid fa-chart-line"></i> Dashboard
+      </button>
+      <button class="btn sm" data-act="open-pool" data-id="${p.id}" title="Pool"><i class="fa-solid fa-dragon"></i></button>
+      <button class="btn sm" data-act="edit-player" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+      <button class="btn sm danger" data-act="del-player" data-id="${p.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  </div>`;
+}
+
+let activePlayerId = null;
+export const getActivePlayerId = () => activePlayerId;
+export const setActivePlayerId = id => { activePlayerId = id; };
+
+export function viewPools() {
+  if (!state.players.length) return `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Cadastre jogadores primeiro.</div>`;
+  if (!activePlayerId || !state.players.find(p => p.id === activePlayerId))
+    activePlayerId = state.players[0].id;
+  const p = state.players.find(x => x.id === activePlayerId);
+  const byTier = t => p.pool.filter(c => c.tier === t);
+
+  return `
+  <div class="tabs">
+    ${state.players.map(x => `
+      <button class="tab ${x.id===activePlayerId?'active':''}" data-act="select-player" data-id="${x.id}">
+        <span class="dot" style="color:${x.status==='titular'?'#5ee08c':x.status==='reserva'?'#f7bd4a':'#7fb2ff'}"></span>
+        ${esc(x.nick)} <span style="opacity:.6;font-size:11px">${x.role}</span>
+        <span style="opacity:.5;font-size:11px">(${x.pool.length})</span>
+      </button>`).join('')}
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+    <div class="avatar" style="width:46px;height:46px;flex:0 0 46px;font-size:17px">${esc(p.nick.slice(0,2).toUpperCase())}</div>
+    <div>
+      <div style="font-size:17px;font-weight:700;color:var(--gold2)">${esc(p.nick)}</div>
+      <div style="font-size:12px;color:var(--muted)">${roleName(p.role)} · ${p.status}${p.name?' · '+esc(p.name):''}</div>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:8px;font-size:12px;color:var(--muted);margin-right:8px">
+      ${TIERS.map(t => `<span style="padding:4px 10px;border-radius:6px;background:#101823;border:1px solid var(--border)">
+        <b class="tier ${t}" style="display:inline-grid;width:18px;height:18px;font-size:10px;vertical-align:middle;margin-right:5px">${t}</b>${byTier(t).length}</span>`).join('')}
+    </div>
+    <button class="btn primary" data-act="new-champ" data-pid="${p.id}"><i class="fa-solid fa-plus"></i> Campeão</button>
+  </div>
+  ${p.pool.length ? TIERS.filter(t => byTier(t).length).map(t => `
+    <div style="margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <span class="tier ${t}" style="width:24px;height:24px;font-size:13px">${t}</span>
+        <span style="font-size:11.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:700">
+          ${t==='S'?'Prioridade Máxima':t==='A'?'Sólido':t==='B'?'Situacional':'Em desenvolvimento'}
+        </span>
+        <div style="flex:1;height:1px;background:var(--border-soft)"></div>
+        <span style="font-size:11px;color:var(--muted)">${byTier(t).length}</span>
+      </div>
+      <div class="grid g-auto">${byTier(t).map(c => champCardHTML(c, p.id)).join('')}</div>
+    </div>`).join('')
+  : `<div class="empty"><i class="fa-solid fa-dragon" style="font-size:26px;opacity:.4"></i><br>Nenhum campeão na pool de ${esc(p.nick)}.</div>`}`;
+}
+
+export function champCardHTML(c, pid) {
+  const pt = PICK_TYPES[c.type] || PICK_TYPES.blind;
+  return `<div class="champ-card">
+    <div class="hd">
+      <div class="cname">${esc(c.champ)}</div>
+      <div class="tier ${c.tier}">${c.tier}</div>
+    </div>
+    <div><span class="tag ${pt.cls}">${pt.label}</span></div>
+    ${c.notes?`<div class="champ-notes">${esc(c.notes)}</div>`:''}
+    <div style="display:flex;gap:4px;margin-top:auto;padding-top:9px;border-top:1px solid var(--border-soft)">
+      <div style="flex:1"></div>
+      <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
+      <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+    </div>
+  </div>`;
+}
+
+export function viewMatrix() {
+  const players = [...state.players]
+    .filter(p => p.status !== 'staff')
+    .sort((a,b) => ROLE_ORDER[a.role]-ROLE_ORDER[b.role]);
+  if (!players.length) return `<div class="empty"><i class="fa-solid fa-table" style="font-size:26px;opacity:.4"></i><br>Sem jogadores.</div>`;
+
+  const map = new Map();
+  players.forEach(p => p.pool.forEach(c => {
+    if (!map.has(c.champ)) map.set(c.champ, {});
+    map.get(c.champ)[p.id] = c.tier;
+  }));
+  const rows = [...map.entries()].map(([champ, tiers]) => {
+    const owners = Object.values(tiers);
+    const best = TIERS.find(t => owners.includes(t)) || 'C';
+    return { champ, tiers, best, count: owners.length };
+  }).sort((a,b) => (TIERS.indexOf(a.best)-TIERS.indexOf(b.best)) || (b.count-a.count) || a.champ.localeCompare(b.champ));
+
+  return `
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head"><h3><i class="fa-solid fa-table"></i> Cobertura — ${rows.length} campeões</h3></div>
+    <div style="font-size:12.5px;color:var(--muted)">Campeões com apenas 1 dono são pontos de fragilidade em draft.</div>
+  </div>
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead><tr><th>Campeão</th>
+        ${players.map(p => `<th>${esc(p.nick)}<br><span style="color:var(--muted);font-weight:500;font-size:9.5px">${p.role}</span></th>`).join('')}
+        <th>Cobertura</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td>${esc(r.champ)}</td>
+          ${players.map(p => {
+            const t = r.tiers[p.id];
+            return t ? `<td class="cell-${t}">${t}</td>` : `<td class="cell-empty">—</td>`;
+          }).join('')}
+          <td style="color:${r.count===1?'#ff9b9b':r.count>=3?'#5ee08c':'var(--muted)'};font-weight:700">${r.count}${r.count===1?' <i class="fa-solid fa-triangle-exclamation"></i>':''}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+export function viewScrims() {
+  const rec = scrimRecord();
+  const sorted = [...state.scrims].sort((a,b) => b.date.localeCompare(a.date));
+  return `
+  <div class="grid g-3" style="margin-bottom:18px">
+    <div class="stat"><div class="lbl">Total de Scrims</div><div class="val">${rec.total}</div></div>
+    <div class="stat green"><div class="lbl">Vitórias</div><div class="val">${rec.w}</div></div>
+    <div class="stat red"><div class="lbl">Derrotas</div><div class="val">${rec.l}</div></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn primary" data-act="new-scrim"><i class="fa-solid fa-plus"></i> Registrar Scrim</button>
+  </div>
+  ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:9px">
+    ${sorted.map(s => `<div class="scrim-row">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="res-badge res-${s.result}">${s.result}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700">${fmtShort(s.date)}</div>
+      </div>
+      <div style="min-width:0">
+        <div style="font-weight:700;font-size:14px;color:var(--gold2)">vs ${esc(s.opponent)}</div>
+        ${s.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.notes)}</div>`:''}
+      </div>
+      <div style="font-weight:800;color:var(--gold2);text-align:center;font-size:15px">${esc(s.score)}</div>
+      <div style="font-size:11.5px;color:var(--muted);text-align:center">${esc(s.format)}</div>
+      <div style="display:flex;gap:4px;justify-content:flex-end">
+        <button class="icon-btn" data-act="edit-scrim" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
+        <button class="icon-btn" data-act="del-scrim" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`).join('')}
+  </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}`;
+}
+
+export function viewDraft() {
+  const d = state.draft;
+  const slot = (side, kind, i) => `
+    <div class="slot-row ${kind==='ban'?'ban':''}">
+      <span class="idx">${kind==='ban'?'B':'P'}${i+1}</span>
+      <input list="champ-list" data-draft="${side}.${kind}.${i}"
+             value="${esc(d[side][kind][i]||'')}" placeholder="${kind==='ban'?'Ban…':'Pick…'}" autocomplete="off">
+    </div>`;
+  return `
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <button class="btn primary" data-act="save-draft"><i class="fa-solid fa-floppy-disk"></i> Salvar Draft</button>
+    <button class="btn" data-act="clear-draft"><i class="fa-solid fa-eraser"></i> Limpar</button>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--muted)">${state.drafts.length} draft(s) salvo(s)</span>
+  </div>
+  <div class="draft-board">
+    <div class="side blue">
+      <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin-bottom:8px">Bans</div>
+      ${[0,1,2,3,4].map(i => slot('blue','bans',i)).join('')}
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin:14px 0 8px">Picks</div>
+      ${[0,1,2,3,4].map(i => slot('blue','picks',i)).join('')}
+    </div>
+    <div class="draft-mid"><div class="vs">VS</div></div>
+    <div class="side red">
+      <h4><i class="fa-solid fa-fire"></i> Lado Vermelho</h4>
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin-bottom:8px">Bans</div>
+      ${[0,1,2,3,4].map(i => slot('red','bans',i)).join('')}
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin:14px 0 8px">Picks</div>
+      ${[0,1,2,3,4].map(i => slot('red','picks',i)).join('')}
+    </div>
+  </div>
+  ${state.drafts.length ? `
+  <div class="card" style="margin-top:22px">
+    <div class="card-head"><h3><i class="fa-solid fa-floppy-disk"></i> Drafts Salvos</h3></div>
+    <div class="grid g-auto">
+      ${state.drafts.map(dr => `
+        <div class="note-card">
+          <div class="nhead">
+            <div class="ntitle">${esc(dr.name)}</div>
+            <button class="icon-btn" data-act="del-draft" data-id="${dr.id}"><i class="fa-solid fa-trash"></i></button>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted)">${fmtShort(dr.date)}</div>
+          <div style="font-size:11.5px;line-height:1.6">
+            <div><b style="color:#7fb2ff">Azul:</b> ${dr.blue.picks.filter(Boolean).map(esc).join(', ')||'—'}</div>
+            <div><b style="color:#ff9b9b">Vermelho:</b> ${dr.red.picks.filter(Boolean).map(esc).join(', ')||'—'}</div>
+          </div>
+          <button class="btn sm" data-act="load-draft" data-id="${dr.id}"><i class="fa-solid fa-upload"></i> Carregar</button>
+        </div>`).join('')}
+    </div>
+  </div>` : ''}`;
+}
+
+export function bindDraft() {
+  document.querySelectorAll('[data-draft]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const [side, kind, i] = inp.dataset.draft.split('.');
+      state.draft[side][kind][+i] = inp.value;
+    });
+  });
+}
+
+export function viewTasks() {
+  const sorted = [...state.tasks].sort((a,b) => (a.done===b.done) ? (a.due||'').localeCompare(b.due||'') : (a.done?1:-1));
+  return `
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn primary" data-act="new-task"><i class="fa-solid fa-plus"></i> Nova Tarefa</button>
+  </div>
+  ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+    ${sorted.map(t => `
+      <div class="task-row ${t.done?'done':''}">
+        <button class="task-check ${t.done?'checked':''}" data-act="toggle-task" data-id="${t.id}">
+          <i class="fa-solid fa-check"></i>
+        </button>
+        <div style="flex:1;min-width:0">
+          <div class="task-title">${esc(t.title)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            ${t.assignee ? `<i class="fa-solid fa-user"></i> ${esc(t.assignee)}` : ''}
+            ${t.due ? ` · <i class="fa-regular fa-calendar"></i> ${fmtShort(t.due)}` : ''}
+            ${t.priority ? ` · <span style="color:${t.priority==='alta'?'#ff9b9b':t.priority==='média'?'#f7bd4a':'var(--muted)'}">${t.priority}</span>` : ''}
+          </div>
+        </div>
+        <button class="icon-btn" data-act="edit-task" data-id="${t.id}"><i class="fa-solid fa-pen"></i></button>
+        <button class="icon-btn" data-act="del-task" data-id="${t.id}"><i class="fa-solid fa-trash"></i></button>
+      </div>`).join('')}
+  </div>` : `<div class="empty"><i class="fa-solid fa-list-check" style="font-size:26px;opacity:.4"></i><br>Nenhuma tarefa.</div>`}`;
+}
+
+export function viewOpponents() {
+  return `
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn primary" data-act="new-opponent"><i class="fa-solid fa-plus"></i> Adicionar Oponente</button>
+  </div>
+  ${state.opponents.length ? `<div class="grid g-auto">
+    ${state.opponents.map(o => `
+      <div class="opp-card">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div class="opp-name">${esc(o.name)}</div>
+            <div class="opp-tag">${esc(o.tag||'')}</div>
+          </div>
+          <button class="icon-btn" data-act="edit-opponent" data-id="${o.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" data-act="del-opponent" data-id="${o.id}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        ${o.playstyle?`<div class="opp-stat"><i class="fa-solid fa-gamepad"></i> ${esc(o.playstyle)}</div>`:''}
+        ${o.weakness?`<div class="opp-stat" style="color:#f7bd4a"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(o.weakness)}</div>`:''}
+        ${o.bans?`<div class="opp-stat"><i class="fa-solid fa-ban"></i> Bans: ${esc(o.bans)}</div>`:''}
+        ${o.picks?`<div class="opp-stat"><i class="fa-solid fa-star"></i> Picks: ${esc(o.picks)}</div>`:''}
+        ${o.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic">${esc(o.notes)}</div>`:''}
+        <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+          H2H: <b style="color:${o.wins>o.losses?'#5ee08c':o.wins<o.losses?'#ff9b9b':'var(--muted)'}">${o.wins||0}V — ${o.losses||0}D</b>
+        </div>
+      </div>`).join('')}
+  </div>` : `<div class="empty"><i class="fa-solid fa-chess" style="font-size:26px;opacity:.4"></i><br>Nenhum oponente mapeado.</div>`}`;
+}
+
+export function viewNotes() {
+  const sorted = [...state.notes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  return `
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn primary" data-act="new-note"><i class="fa-solid fa-plus"></i> Nova Anotação</button>
+  </div>
+  ${sorted.length ? `<div class="grid g-auto">
+    ${sorted.map(n => `
+      <div class="note-card">
+        <div class="nhead">
+          <div class="ntitle">${esc(n.title)}</div>
+          <button class="icon-btn" data-act="edit-note" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" data-act="del-note" data-id="${n.id}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        ${n.body?`<div class="nbody">${esc(n.body)}</div>`:''}
+        <div class="nfoot">
+          ${n.tag?`<span class="tag">${esc(n.tag)}</span>`:''}
+          <span>${n.date?fmtShort(n.date):''}</span>
+        </div>
+      </div>`).join('')}
+  </div>` : `<div class="empty"><i class="fa-solid fa-pen" style="font-size:26px;opacity:.4"></i><br>Nenhuma anotação.</div>`}`;
+}
+
+function isPlayerMode() {
+  return document.body.classList.contains('player-mode');
+}
+
+export function viewPlayerDetail() {
+  const pid = window.__akiCurrentPlayer || null;
+  const p = state.players.find(x => x.id === pid);
+  if (!p) return `<div class="empty"><i class="fa-solid fa-user-slash" style="font-size:26px;opacity:.4"></i><br>Jogador não encontrado.</div>`;
+
+  const riot = p.riot || {};
+  const hasRiot = riot.gameName && riot.puuid;
+  const partial = riot.gameName && !riot.puuid;
+  const stats = riot.stats;
+  const iconUrl = riot.iconId ? `https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${riot.iconId}.png` : null;
+  const playerMode = isPlayerMode();
+
+  return `
+  ${!playerMode ? `
+    <div style="margin-bottom:16px">
+      <button class="btn ghost" data-act="nav" data-view="roster"><i class="fa-solid fa-arrow-left"></i> Voltar ao Roster</button>
+    </div>` : ''}
+  <div class="pd-hero">
+    <div class="pd-avatar">
+      ${iconUrl ? `<img src="${iconUrl}" alt="">` : `<span>${esc(p.nick.slice(0,2).toUpperCase())}</span>`}
+      ${riot.level ? `<div class="pd-level">${riot.level}</div>` : ''}
+    </div>
+    <div class="pd-info">
+      <div class="pd-name">${esc(p.nick)}<span class="pill ${p.status}" style="margin-left:8px">${p.status}</span></div>
+      <div class="pd-sub">
+        <i class="fa-solid ${roleIcon(p.role)}"></i> ${roleName(p.role)}
+        ${riot.gameName ? ` · <i class="fa-solid fa-gamepad"></i> ${esc(riot.gameName)}#${esc(riot.tagLine)}` : ''}
+      </div>
+      ${riot.rank ? `<div class="pd-rank"><i class="fa-solid fa-ranking-star"></i> ${esc(riot.rank)}</div>` : ''}
+    </div>
+    ${!playerMode ? `
+      <div class="pd-actions">
+        ${hasRiot ? `
+          <button class="btn primary" data-act="load-stats" data-id="${p.id}">
+            <i class="fa-solid ${stats ? 'fa-rotate' : 'fa-cloud-arrow-down'}"></i>
+            ${stats ? 'Atualizar' : 'Carregar Stats'}
+          </button>
+          <button class="btn" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Riot</button>
+        ` : `<button class="btn primary" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Vincular Riot</button>`}
+      </div>` : (hasRiot ? `
+      <div class="pd-actions">
+        <button class="btn primary" data-act="load-stats" data-id="${p.id}">
+          <i class="fa-solid ${stats ? 'fa-rotate' : 'fa-cloud-arrow-down'}"></i>
+          ${stats ? 'Atualizar' : 'Carregar Stats'}
+        </button>
+      </div>` : '')}
+  </div>
+  ${!hasRiot ? `
+    <div class="empty" style="padding:60px 20px">
+      <i class="fa-solid ${partial ? 'fa-triangle-exclamation' : 'fa-link-slash'}" style="font-size:34px;opacity:.35;color:${partial ? '#ff9b9b' : 'inherit'}"></i>
+      <div style="margin-top:12px;font-size:14px;color:var(--text)">
+        ${partial
+          ? `Conta <b>${esc(riot.gameName)}#${esc(riot.tagLine)}</b> salva mas sem dados da Riot`
+          : (playerMode ? 'Peça ao coach para vincular sua conta Riot' : 'Vincule a conta Riot para ver o dashboard')}
+      </div>
+      ${partial && riot.lastError ? `
+        <div style="margin-top:10px;font-size:12px;color:#ff9b9b;max-width:520px;margin-left:auto;margin-right:auto;padding:8px 12px;background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:6px">
+          <i class="fa-solid fa-circle-exclamation"></i> ${esc(riot.lastError)}
+        </div>` : ''}
+      ${partial ? `
+        <div style="margin-top:16px">
+          <button class="btn primary" data-act="link-riot" data-id="${p.id}">
+            <i class="fa-solid fa-rotate"></i> Tentar novamente
+          </button>
+        </div>` : ''}
+    </div>
+  ` : !stats ? `
+    <div class="empty" style="padding:60px 20px">
+      <i class="fa-solid fa-cloud-arrow-down" style="font-size:34px;opacity:.35"></i>
+      <div style="margin-top:12px;font-size:14px;color:var(--text)">Estatísticas não carregadas</div>
+      <div style="margin-top:6px;font-size:12px">Clique em "Carregar Stats" para buscar as últimas partidas</div>
+    </div>
+  ` : renderStats(stats)}`;
+}
+
+function renderStats(s) {
+  const streakClass = s.streak.type === 'W' ? 'green' : s.streak.type === 'L' ? 'red' : '';
+  return `
+  <div class="grid g-4" style="margin-bottom:18px">
+    <div class="stat ${s.winrate >= 50 ? 'green' : 'red'}">
+      <div class="lbl">Winrate (últimas ${s.total})</div>
+      <div class="val">${s.winrate}%</div>
+      <div class="note">${s.wins}V — ${s.losses}D</div>
+    </div>
+    <div class="stat blue">
+      <div class="lbl">KDA Médio</div>
+      <div class="val">${s.kda}</div>
+      <div class="note">${s.avgKills} / ${s.avgDeaths} / ${s.avgAssists}</div>
+    </div>
+    <div class="stat teal">
+      <div class="lbl">CS / min</div>
+      <div class="val">${s.avgCsPerMin}</div>
+      <div class="note">média por partida</div>
+    </div>
+    <div class="stat ${streakClass}">
+      <div class="lbl">Streak Atual</div>
+      <div class="val">${s.streak.count}${s.streak.type || ''}</div>
+      <div class="note">${s.streak.type === 'W' ? 'vitórias seguidas' : s.streak.type === 'L' ? 'derrotas seguidas' : 'sem dados'}</div>
+    </div>
+  </div>
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-dragon"></i> Campeões Mais Jogados</h3>
+        <div class="spacer"></div>
+        <span style="font-size:11px;color:var(--muted)">${s.champions.length} campeões</span>
+      </div>
+      ${s.champions.length ? `<div style="display:flex;flex-direction:column;gap:9px">
+        ${s.champions.slice(0, 8).map(c => `
+          <div class="champ-bar">
+            <img class="champ-icon" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(c.champion)}.png"
+                 onerror="this.style.display='none'" alt="">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span style="font-weight:600;font-size:13px">${esc(c.champion)}</span>
+                <span style="font-size:11px;color:${c.winrate >= 50 ? '#5ee08c' : '#ff9b9b'};font-weight:700">
+                  ${c.winrate}% <span style="color:var(--muted);font-weight:400">(${c.wins}V-${c.losses}D)</span>
+                </span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${c.winrate}%;background:${c.winrate >= 50 ? 'linear-gradient(90deg,#22c55e,#5ee08c)' : 'linear-gradient(90deg,#e05252,#ff9b9b)'}"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:3px">
+                <span>${c.games} jogo(s) · KDA ${c.kda}</span>
+                <span>${c.csPerMin} CS/min</span>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>` : `<div class="empty">Sem partidas</div>`}
+    </div>
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-chart-pie"></i> Distribuição por Posição</h3></div>
+      ${s.roles.length ? `<div style="display:flex;flex-direction:column;gap:10px">
+        ${s.roles.map(r => {
+          const pct = Math.round(r.games / s.total * 100);
+          return `<div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px">
+              <span><b style="color:var(--gold2)">${r.role}</b> · ${r.games} jogo(s)</span>
+              <span style="color:${r.winrate >= 50 ? '#5ee08c' : '#ff9b9b'};font-weight:700">${r.winrate}% WR</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--blue),var(--teal))"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : `<div class="empty">—</div>`}
+      <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border-soft)">
+        <div class="card-head" style="margin-bottom:10px"><h3><i class="fa-solid fa-gauge"></i> Médias por Partida</h3></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Dano médio</span><b>${(s.avgDamage/1000).toFixed(1)}k</b></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Visão média</span><b>${s.avgVision}</b></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Kills</span><b>${s.avgKills}</b></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Mortes</span><b>${s.avgDeaths}</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> Últimas Partidas</h3>
+      <div class="spacer"></div>
+      <span style="font-size:11px;color:var(--muted)">atualizado ${new Date(s.updatedAt).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${s.matches.map(m => `
+        <div class="match-row ${m.win ? 'win' : 'loss'}">
+          <div class="match-result">${m.win ? 'W' : 'L'}</div>
+          <img class="champ-icon-sm" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(m.champion)}.png"
+               onerror="this.style.display='none'" alt="">
+          <div class="match-champ">${esc(m.champion)}</div>
+          <div class="match-kda"><b>${m.kills}</b> / <span style="color:#ff9b9b">${m.deaths}</span> / <b>${m.assists}</b></div>
+          <div class="match-cs">${m.cs} CS <span style="color:var(--muted)">(${m.csPerMin.toFixed(1)}/m)</span></div>
+          <div class="match-role">${m.role}</div>
+          <div class="match-time">${Math.floor(m.durationMin)}min</div>
+          <div class="match-date">${fmtShort(m.dateStr)}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}

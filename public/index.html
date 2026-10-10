@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aki Coach</title>
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="preloader">
+  <div class="pl-inner">
+    <img src="assets/logo.png" alt="" class="pl-logo">
+    <div class="pl-spinner"></div>
+    <div class="pl-text">AKI COACH</div>
+  </div>
+</div>
+
+<div id="player-screen" style="display:none">
+  <div class="player-box">
+    <img src="assets/logo.png" alt="" class="player-logo">
+    <h2>Aki Coach</h2>
+    <p class="player-sub">Entrar como jogador</p>
+    <form id="player-form">
+      <div class="field">
+        <label>Nickname</label>
+        <input type="text" id="player-nick" required placeholder="Seu nick" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>PIN</label>
+        <input type="password" id="player-pin" required placeholder="••••••" inputmode="numeric" maxlength="8" autocomplete="off">
+      </div>
+      <div id="player-error" class="auth-error"></div>
+      <button type="submit" class="btn primary" id="player-submit">
+        <i class="fa-solid fa-right-to-bracket"></i> Entrar
+      </button>
+    </form>
+  </div>
+</div>
+
+<div id="auth-screen" style="display:none">
+  <div class="auth-box">
+    <img src="assets/logo.png" alt="" class="auth-logo">
+    <h2>Aki Coach</h2>
+    <p class="auth-sub">Painel do Head Coach</p>
+    <form id="auth-form">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="auth-email" required placeholder="coach@time.com">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="auth-password" required minlength="6" placeholder="••••••">
+      </div>
+      <div id="auth-error" class="auth-error"></div>
+      <button type="submit" class="btn primary" id="auth-submit">
+        <i class="fa-solid fa-right-to-bracket"></i> Entrar
+      </button>
+    </form>
+    <button class="btn ghost" id="auth-toggle">Criar conta</button>
+    <button class="link-btn" id="back-to-player" style="margin-top:14px">
+      <i class="fa-solid fa-arrow-left"></i> Voltar
+    </button>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="assets/logo.png" alt="" class="brand-logo">
+      <div>
+        <h1>Aki Coach</h1>
+        <small id="team-tag">TAG</small>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="user-badge" id="user-badge">
+        <i class="fa-solid fa-circle-user"></i>
+        <span id="user-name">—</span>
+      </div>
+      <div class="mini">
+        <button data-act="export"><i class="fa-solid fa-download"></i> Exportar</button>
+        <button data-act="import"><i class="fa-solid fa-upload"></i> Importar</button>
+      </div>
+      <button data-act="logout" class="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Sair
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h2 id="page-title"></h2>
+        <div class="sub" id="page-sub"></div>
+      </div>
+      <div class="spacer"></div>
+      <div class="clock" id="clock"></div>
+      <div id="player-topbar-actions" style="display:none"></div>
+      <button class="icon-btn" data-act="toggle-theme" title="Tema">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+    </header>
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast"></div>
+<datalist id="champ-list"></datalist>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
