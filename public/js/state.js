@@ -119,11 +119,32 @@ export function seedData() {
   };
 }
 
+export function normalizePlayer(p) {
+  if (!p || typeof p !== 'object') return null;
+  return {
+    id: p.id || uid(),
+    nick: String(p.nick || 'Sem nome').trim(),
+    name: String(p.name || '').trim(),
+    role: p.role || 'MID',
+    status: p.status || 'titular',
+    pinHash: p.pinHash || null,
+    pool: Array.isArray(p.pool) ? p.pool.filter(Boolean) : [],
+    riot: (p.riot && typeof p.riot === 'object') ? p.riot : {
+      gameName: '', tagLine: '', puuid: '', platform: 'BR1', rank: '', iconId: ''
+    },
+  };
+}
+
+export function normalizePlayers(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizePlayer).filter(Boolean);
+}
+
 export async function loadFromFirebase(uid) {
   const data = await dbGet(`teams/${uid}`);
   if (!data) return false;
   state.team = data.team || state.team;
-  state.players = data.players ? Object.values(data.players) : [];
+  state.players = data.players ? normalizePlayers(Object.values(data.players)) : [];
   state.events = data.events ? Object.values(data.events) : [];
   state.scrims = data.scrims ? Object.values(data.scrims) : [];
   state.drafts = data.drafts ? Object.values(data.drafts) : [];
@@ -154,7 +175,7 @@ export function listenTeam(uid, cb) {
   return dbListen(`teams/${uid}`, data => {
     if (!data) return;
     if (data.team) state.team = data.team;
-    if (data.players) state.players = Object.values(data.players);
+    if (data.players) state.players = normalizePlayers(Object.values(data.players));
     if (data.events) state.events = Object.values(data.events);
     if (data.scrims) state.scrims = Object.values(data.scrims);
     if (data.drafts) state.drafts = Object.values(data.drafts);

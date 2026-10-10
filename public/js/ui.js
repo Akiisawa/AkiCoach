@@ -24,11 +24,12 @@ export function toastIcon(msg, icon = 'fa-circle-check') {
 
 export const upcoming = (n = 5) => state.events
   .filter(e => e.date >= TODAY)
-  .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time))
+  .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
   .slice(0, n);
 
 export const eventsOn = k => state.events.filter(e => e.date === k);
-export const poolCount = (p, tiers = TIERS) => p.pool.filter(c => tiers.includes(c.tier)).length;
+export const poolCount = (p, tiers = TIERS) =>
+  (Array.isArray(p?.pool) ? p.pool : []).filter(c => tiers.includes(c.tier)).length;
 export const scrimRecord = () => {
   const w = state.scrims.filter(s => s.result === 'W').length;
   const l = state.scrims.filter(s => s.result === 'L').length;
@@ -39,10 +40,19 @@ function isPlayerMode() {
   return document.body.classList.contains('player-mode');
 }
 
+function safePool(p) {
+  return Array.isArray(p?.pool) ? p.pool : [];
+}
+
+/* ═══════════════════════════════════════
+   VIEW: DASHBOARD
+   ═══════════════════════════════════════ */
 export function viewDash() {
   const rec = scrimRecord();
   const titulares = state.players.filter(p => p.status === 'titular');
-  const totalChamps = new Set(state.players.flatMap(p => p.pool.map(c => c.champ))).size;
+  const totalChamps = new Set(
+    state.players.flatMap(p => safePool(p).map(c => c.champ))
+  ).size;
   const alertas = titulares.filter(p => poolCount(p, ['S','A']) < 3);
   const ups = upcoming(6);
   const pendingTasks = state.tasks.filter(t => !t.done);
@@ -177,6 +187,9 @@ export function shiftCal(n) {
 
 export function resetCal() { calCursor = new Date(); }
 
+/* ═══════════════════════════════════════
+   VIEW: AGENDA
+   ═══════════════════════════════════════ */
 export function viewAgenda() {
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   const first = new Date(y, m, 1);
@@ -240,6 +253,9 @@ export function viewAgenda() {
   </div>`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: ROSTER
+   ═══════════════════════════════════════ */
 export function viewRoster() {
   const order = { titular:0, reserva:1, staff:2, inativo:3 };
   const ps = [...state.players].sort((a,b) =>
@@ -260,56 +276,66 @@ export function viewRoster() {
 }
 
 export function playerCardHTML(p) {
-  const initials = p.nick.slice(0, 2).toUpperCase();
-  const sorted = [...p.pool].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
-  const hasRiot = p.riot && p.riot.gameName && p.riot.puuid;
-  const riotPartial = p.riot && p.riot.gameName && !p.riot.puuid;
+  if (!p || typeof p !== 'object') return '';
+
+  const safe = {
+    id: p.id || '',
+    nick: String(p.nick || 'SEM NOME').trim(),
+    name: String(p.name || '').trim(),
+    role: p.role || 'MID',
+    status: p.status || 'titular',
+    pool: Array.isArray(p.pool) ? p.pool.filter(Boolean) : [],
+    riot: (p.riot && typeof p.riot === 'object') ? p.riot : {},
+  };
+
+  const initials = (safe.nick.slice(0, 2).toUpperCase().replace(/[^\w]/g, '')) || 'XX';
+  const sorted = [...safe.pool].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
+  const hasRiot = safe.riot.gameName && safe.riot.puuid;
+  const riotPartial = safe.riot.gameName && !safe.riot.puuid;
 
   const riotLine = hasRiot
-    ? `<i class="fa-solid fa-gamepad"></i> ${esc(p.riot.gameName)}#${esc(p.riot.tagLine)}
-       ${p.riot.rank ? `<span style="color:var(--muted)"> · ${esc(p.riot.rank)}</span>` : ''}
+    ? `<i class="fa-solid fa-gamepad"></i> ${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)}
+       ${safe.riot.rank ? `<span style="color:var(--muted)"> · ${esc(safe.riot.rank)}</span>` : ''}
        <span class="badge-riot"><i class="fa-solid fa-circle-check"></i> Riot</span>`
     : riotPartial
       ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f7bd4a"></i>
-         <span style="color:#f7bd4a">${esc(p.riot.gameName)}#${esc(p.riot.tagLine)} · sem dados</span>`
+         <span style="color:#f7bd4a">${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)} · sem dados</span>`
       : '';
 
   const poolHTML = sorted.length
     ? sorted.slice(0, 9).map(c =>
-        `<span class="champ-mini ${c.tier.toLowerCase()}" title="${esc(PICK_TYPES[c.type]?.label || '')}">${esc(c.champ)} <b style="opacity:.65">${c.tier}</b></span>`
+        `<span class="champ-mini ${esc((c.tier || 'c').toLowerCase())}">${esc(c.champ)} <b style="opacity:.65">${esc(c.tier)}</b></span>`
       ).join('')
       + (sorted.length > 9 ? `<span class="champ-mini">+${sorted.length - 9}</span>` : '')
     : `<span class="champ-mini empty">Sem campeões na pool</span>`;
 
+  const avatarHTML = (hasRiot && safe.riot.iconId)
+    ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${esc(safe.riot.iconId)}.png" alt="">`
+    : esc(initials);
+
   return `<div class="player-card">
-    <div class="role-tag"><i class="fa-solid ${roleIcon(p.role)}"></i> ${p.role}</div>
+    <div class="role-tag"><i class="fa-solid ${roleIcon(safe.role)}"></i> ${esc(safe.role)}</div>
     <div class="top">
-<div class="avatar">
-  ${hasRiot && p.riot.iconId
-    ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${p.riot.iconId}.png"
-            alt=""
-            onerror="this.style.display='none';this.parentElement.textContent='${esc(initials)}'">`
-    : esc(initials)}
-</div>
+      <div class="avatar">${avatarHTML}</div>
       <div style="flex:1;min-width:0">
-        <div class="nick">${esc(p.nick)}</div>
-        <div class="sub">${esc(p.name || roleName(p.role))}</div>
-        <div style="margin-top:6px"><span class="pill ${p.status}">${p.status}</span></div>
+        <div class="nick">${esc(safe.nick)}</div>
+        <div class="sub">${esc(safe.name || roleName(safe.role))}</div>
+        <div style="margin-top:6px"><span class="pill ${esc(safe.status)}">${esc(safe.status)}</span></div>
       </div>
     </div>
-    <div class="riot-line ${riotLine ? '' : 'empty'}">${riotLine || '&nbsp;'}</div>
+    <div class="riot-line ${riotLine ? '' : 'empty'}">${riotLine || ''}</div>
     <div class="pool-header">
       <span>Pool</span>
-      <span class="count">${p.pool.length}</span>
+      <span class="count">${safe.pool.length}</span>
     </div>
     <div class="champ-mini-list">${poolHTML}</div>
     <div class="card-actions">
-      <button class="btn sm primary" data-act="open-player-detail" data-id="${p.id}" style="flex:1;justify-content:center">
+      <button class="btn sm primary" data-act="open-player-detail" data-id="${esc(safe.id)}" style="flex:1;justify-content:center">
         <i class="fa-solid fa-chart-line"></i> Dashboard
       </button>
-      <button class="btn sm" data-act="open-pool" data-id="${p.id}" title="Pool"><i class="fa-solid fa-dragon"></i></button>
-      <button class="btn sm" data-act="edit-player" data-id="${p.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-      <button class="btn sm danger" data-act="del-player" data-id="${p.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+      <button class="btn sm" data-act="open-pool" data-id="${esc(safe.id)}" title="Pool"><i class="fa-solid fa-dragon"></i></button>
+      <button class="btn sm" data-act="edit-player" data-id="${esc(safe.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+      <button class="btn sm danger" data-act="del-player" data-id="${esc(safe.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
     </div>
   </div>`;
 }
@@ -318,11 +344,17 @@ let activePlayerId = null;
 export const getActivePlayerId = () => activePlayerId;
 export const setActivePlayerId = id => { activePlayerId = id; };
 
+/* ═══════════════════════════════════════
+   VIEW: POOLS
+   ═══════════════════════════════════════ */
 export function viewPools() {
   if (!state.players.length) return `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Cadastre jogadores primeiro.</div>`;
   if (!activePlayerId || !state.players.find(p => p.id === activePlayerId))
     activePlayerId = state.players[0].id;
   const p = state.players.find(x => x.id === activePlayerId);
+  if (!p) return `<div class="empty">Jogador não encontrado.</div>`;
+  if (!Array.isArray(p.pool)) p.pool = [];
+
   const byTier = t => p.pool.filter(c => c.tier === t);
   const playerMode = isPlayerMode();
 
@@ -332,7 +364,7 @@ export function viewPools() {
       <button class="tab ${x.id===activePlayerId?'active':''}" data-act="select-player" data-id="${x.id}">
         <span class="dot" style="color:${x.status==='titular'?'#5ee08c':x.status==='reserva'?'#f7bd4a':'#7fb2ff'}"></span>
         ${esc(x.nick)} <span style="opacity:.6;font-size:11px">${x.role}</span>
-        <span style="opacity:.5;font-size:11px">(${x.pool.length})</span>
+        <span style="opacity:.5;font-size:11px">(${Array.isArray(x.pool) ? x.pool.length : 0})</span>
       </button>`).join('')}
   </div>
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
@@ -369,7 +401,7 @@ export function champCardHTML(c, pid) {
   return `<div class="champ-card">
     <div class="hd">
       <div class="cname">${esc(c.champ)}</div>
-      <div class="tier ${c.tier}">${c.tier}</div>
+      <div class="tier ${esc(c.tier)}">${esc(c.tier)}</div>
     </div>
     <div><span class="tag ${pt.cls}">${pt.label}</span></div>
     ${c.notes?`<div class="champ-notes">${esc(c.notes)}</div>`:''}
@@ -382,6 +414,9 @@ export function champCardHTML(c, pid) {
   </div>`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: MATRIX
+   ═══════════════════════════════════════ */
 export function viewMatrix() {
   const players = [...state.players]
     .filter(p => p.status !== 'staff')
@@ -389,10 +424,13 @@ export function viewMatrix() {
   if (!players.length) return `<div class="empty"><i class="fa-solid fa-table" style="font-size:26px;opacity:.4"></i><br>Sem jogadores.</div>`;
 
   const map = new Map();
-  players.forEach(p => p.pool.forEach(c => {
-    if (!map.has(c.champ)) map.set(c.champ, {});
-    map.get(c.champ)[p.id] = c.tier;
-  }));
+  players.forEach(p => {
+    const pool = Array.isArray(p.pool) ? p.pool : [];
+    pool.forEach(c => {
+      if (!map.has(c.champ)) map.set(c.champ, {});
+      map.get(c.champ)[p.id] = c.tier;
+    });
+  });
   const rows = [...map.entries()].map(([champ, tiers]) => {
     const owners = Object.values(tiers);
     const best = TIERS.find(t => owners.includes(t)) || 'C';
@@ -424,6 +462,9 @@ export function viewMatrix() {
   </div>`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: SCRIMS
+   ═══════════════════════════════════════ */
 export function viewScrims() {
   const rec = scrimRecord();
   const sorted = [...state.scrims].sort((a,b) => b.date.localeCompare(a.date));
@@ -459,6 +500,9 @@ export function viewScrims() {
   </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: DRAFT
+   ═══════════════════════════════════════ */
 export function viewDraft() {
   const d = state.draft;
   const playerMode = isPlayerMode();
@@ -528,6 +572,9 @@ export function bindDraft() {
   });
 }
 
+/* ═══════════════════════════════════════
+   VIEW: TASKS
+   ═══════════════════════════════════════ */
 export function viewTasks() {
   const playerMode = isPlayerMode();
   const myNick = window.__akiPlayerNick || '';
@@ -568,6 +615,9 @@ export function viewTasks() {
   </div>` : `<div class="empty"><i class="fa-solid fa-list-check" style="font-size:26px;opacity:.4"></i><br>${playerMode ? 'Você não tem tarefas atribuídas.' : 'Nenhuma tarefa.'}</div>`}`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: OPPONENTS
+   ═══════════════════════════════════════ */
 export function viewOpponents() {
   const playerMode = isPlayerMode();
   return `
@@ -598,6 +648,9 @@ export function viewOpponents() {
   </div>` : `<div class="empty"><i class="fa-solid fa-chess" style="font-size:26px;opacity:.4"></i><br>Nenhum oponente mapeado.</div>`}`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: NOTES
+   ═══════════════════════════════════════ */
 export function viewNotes() {
   const playerMode = isPlayerMode();
   const sorted = [...state.notes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -623,12 +676,15 @@ export function viewNotes() {
   </div>` : `<div class="empty"><i class="fa-solid fa-pen" style="font-size:26px;opacity:.4"></i><br>Nenhuma anotação.</div>`}`;
 }
 
+/* ═══════════════════════════════════════
+   VIEW: PLAYER DETAIL
+   ═══════════════════════════════════════ */
 export function viewPlayerDetail() {
   const pid = window.__akiCurrentPlayer || null;
   const p = state.players.find(x => x.id === pid);
   if (!p) return `<div class="empty"><i class="fa-solid fa-user-slash" style="font-size:26px;opacity:.4"></i><br>Jogador não encontrado.</div>`;
 
-  const riot = p.riot || {};
+  const riot = (p.riot && typeof p.riot === 'object') ? p.riot : {};
   const hasRiot = riot.gameName && riot.puuid;
   const partial = riot.gameName && !riot.puuid;
   const stats = riot.stats;
@@ -728,7 +784,7 @@ function renderStats(s) {
         ${s.champions.slice(0, 8).map(c => `
           <div class="champ-bar">
             <img class="champ-icon" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(c.champion)}.png"
-                 onerror="this.style.display='none'" alt="">
+                 onerror="this.style.visibility='hidden'" alt="">
             <div style="flex:1;min-width:0">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
                 <span style="font-weight:600;font-size:13px">${esc(c.champion)}</span>
@@ -785,7 +841,7 @@ function renderStats(s) {
         <div class="match-row ${m.win ? 'win' : 'loss'}">
           <div class="match-result">${m.win ? 'W' : 'L'}</div>
           <img class="champ-icon-sm" src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${champIconName(m.champion)}.png"
-               onerror="this.style.display='none'" alt="">
+               onerror="this.style.visibility='hidden'" alt="">
           <div class="match-champ">${esc(m.champion)}</div>
           <div class="match-kda"><b>${m.kills}</b> / <span style="color:#ff9b9b">${m.deaths}</span> / <b>${m.assists}</b></div>
           <div class="match-cs">${m.cs} CS <span style="color:var(--muted)">(${m.csPerMin.toFixed(1)}/m)</span></div>

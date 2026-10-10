@@ -146,6 +146,10 @@ export function modalPlayer(id) {
           role: d.role,
           status: d.status
         });
+        if (!Array.isArray(p.pool)) p.pool = [];
+        if (!p.riot || typeof p.riot !== 'object') {
+          p.riot = { gameName:'', tagLine:'', puuid:'', platform:'BR1', rank:'', iconId:'' };
+        }
       } else {
         state.players.push({
           id: uid(), nick: newNick, name: d.name.trim(), role: d.role, status: d.status,
