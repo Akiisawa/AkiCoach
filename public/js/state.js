@@ -1,9 +1,5 @@
 import { dbGet, dbSet, dbListen } from './firebase.js';
 
-import {
-  state, ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
-  hashPin, generatePin
-} from './state.js';
 
 export const ROLES = [
   { id:'TOP', name:'Topo', icon:'fa-shield-halved' },

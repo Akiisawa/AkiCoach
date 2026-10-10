@@ -4,12 +4,6 @@ import {
 } from './state.js';
 import { champIconName } from './riot-api.js';
 
-import {
-  viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
-  viewScrims, viewDraft, viewTasks, viewOpponents, viewNotes,
-  viewPlayerDetail, viewComps, bindDraft, toastIcon,
-  shiftCal, resetCal
-} from './ui.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 

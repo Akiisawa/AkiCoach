@@ -6,7 +6,7 @@ import {
 import {
   viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
   viewScrims, viewDraft, viewTasks, viewOpponents, viewNotes,
-  viewPlayerDetail, bindDraft, toastIcon,
+  viewPlayerDetail, viewComps, bindDraft, toastIcon,
   shiftCal, resetCal
 } from './ui.js';
 import {
@@ -43,6 +43,7 @@ const PLAYER_VIEWS = [
   { id:'scrims', icon:'fa-flag', label:'Scrims' },
   { id:'tasks', icon:'fa-list-check', label:'Minhas Tarefas' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
+  { id:'comps', icon:'fa-layer-group', label:'Composições' },
   { id:'opponents', icon:'fa-binoculars', label:'Scouting' },
   { id:'notes', icon:'fa-pen', label:'Anotações' }
 ];
@@ -69,7 +70,6 @@ let playerModeActive = false;
 function renderNav() {
   const views = playerModeActive ? PLAYER_VIEWS : VIEWS;
   const counts = playerModeActive ? {} : {
-    agenda: state.events.length,
     roster: state.players.length,
     scrims: state.scrims.length,
     notes: state.notes.length,
