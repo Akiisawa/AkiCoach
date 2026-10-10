@@ -598,17 +598,163 @@ body.player-mode .side-foot{display:none}
 }
 .tab .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
 
+/* ═══ CHAMP CARD COM SPLASH ═══ */
 .champ-card{
-  background:linear-gradient(165deg,#0a121e,#060b14);
-  border:1px solid var(--border);border-radius:6px;padding:13px;
-  display:flex;flex-direction:column;gap:9px;transition:.18s;position:relative;
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  transition:.25s;
+  background:#0a0f18;
 }
+
 .champ-card:hover{
-  border-color:rgba(74,158,255,.5);transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 20px rgba(74,158,255,.12);
+  transform:translateY(-3px);
+  box-shadow:0 12px 32px rgba(0,0,0,.5),0 0 24px rgba(74,158,255,.18);
 }
-.champ-card .hd{display:flex;align-items:flex-start;gap:10px}
-.champ-card .cname{font-weight:700;font-size:14px;color:var(--silver);flex:1;line-height:1.2}
+
+.champ-card[data-tier="S"]{
+  border-color:rgba(74,158,255,.55);
+  box-shadow:0 0 20px rgba(74,158,255,.2);
+}
+.champ-card[data-tier="A"]{
+  border-color:rgba(0,212,255,.45);
+}
+.champ-card[data-tier="B"]{
+  border-color:rgba(139,184,255,.35);
+}
+.champ-card[data-tier="C"]{
+  border-color:var(--border);
+}
+
+/* Imagem de fundo (splash art) */
+.champ-bg{
+  position:absolute;inset:0;
+  overflow:hidden;
+  z-index:0;
+}
+.champ-bg img{
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:center 25%;
+  display:block;
+  transition:transform .4s ease,filter .3s ease;
+  filter:saturate(.85) brightness(.9);
+}
+.champ-card:hover .champ-bg img{
+  transform:scale(1.08);
+  filter:saturate(1) brightness(1);
+}
+
+/* Gradiente escuro sobre a splash */
+.champ-overlay{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(180deg,
+      rgba(4,7,12,.35) 0%,
+      rgba(4,7,12,.15) 30%,
+      rgba(4,7,12,.75) 75%,
+      rgba(4,7,12,.95) 100%
+    );
+  z-index:1;
+  pointer-events:none;
+}
+
+/* Conteúdo acima */
+.champ-content{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px;
+  flex:1;
+  min-height:220px;
+}
+
+.champ-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.champ-head .tier{
+  flex:0 0 28px;
+  width:28px;height:28px;
+  backdrop-filter:blur(6px);
+  box-shadow:0 2px 8px rgba(0,0,0,.6);
+}
+
+.champ-name{
+  font-size:17px;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:.02em;
+  line-height:1.15;
+  text-shadow:
+    0 1px 3px rgba(0,0,0,.9),
+    0 0 12px rgba(0,0,0,.7);
+  word-break:break-word;
+}
+
+.champ-body{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:auto;
+}
+
+.champ-body .tag{
+  align-self:flex-start;
+  backdrop-filter:blur(6px);
+  background:rgba(4,7,12,.65);
+}
+
+.champ-body .champ-notes{
+  font-size:11.5px;
+  line-height:1.45;
+  color:rgba(220,232,245,.85);
+  font-style:italic;
+  padding:6px 10px;
+  background:rgba(4,7,12,.7);
+  border-radius:5px;
+  border-left:2px solid rgba(74,158,255,.5);
+  backdrop-filter:blur(4px);
+}
+
+.champ-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:4px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.08);
+  opacity:.5;
+  transition:.2s;
+}
+.champ-card:hover .champ-actions{
+  opacity:1;
+}
+.champ-actions .icon-btn{
+  background:rgba(4,7,12,.5);
+  backdrop-filter:blur(4px);
+  color:#c8d4e5;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  padding:0;
+}
+.champ-actions .icon-btn:hover{
+  background:rgba(74,158,255,.25);
+  color:#fff;
+}
+.champ-actions .icon-btn[data-act="del-champ"]:hover{
+  background:rgba(224,82,82,.3);
+}
 .tier{
   width:26px;height:26px;flex:0 0 26px;border-radius:5px;display:grid;place-items:center;
   font-weight:900;font-size:13px;border:1px solid;

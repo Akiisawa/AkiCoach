@@ -13,6 +13,9 @@ const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn/14.1.1';
 function profileIconUrl(id) {
   return `${CDRAGON}/profile-icons/${id}.jpg`;
 }
+function championSplashUrl(name) {
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champIconName(name)}_0.jpg`;
+}
 function championIconUrl(name) {
   return `${DDRAGON}/img/champion/${champIconName(name)}.png`;
 }
@@ -427,19 +430,31 @@ export function viewPools() {
 
 export function champCardHTML(c, pid) {
   const pt = PICK_TYPES[c.type] || PICK_TYPES.blind;
-  const playerMode = isPlayerMode();
-  return `<div class="champ-card">
-    <div class="hd">
-      <div class="cname">${esc(c.champ)}</div>
-      <div class="tier ${esc(c.tier)}">${esc(c.tier)}</div>
+  const splash = championSplashUrl(c.champ);
+
+  return `<div class="champ-card" data-tier="${esc(c.tier)}">
+    <div class="champ-bg">
+      <img src="${splash}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'">
     </div>
-    <div><span class="tag ${pt.cls}">${pt.label}</span></div>
-    ${c.notes?`<div class="champ-notes">${esc(c.notes)}</div>`:''}
-    <div style="display:flex;gap:4px;margin-top:auto;padding-top:9px;border-top:1px solid var(--border-soft)">
-      <div style="flex:1"></div>
-      ${canEditPool(pid) ? `
-        <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
-        <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
+    <div class="champ-overlay"></div>
+    <div class="champ-content">
+      <div class="champ-head">
+        <div class="champ-name">${esc(c.champ)}</div>
+        <div class="tier ${esc(c.tier)}">${esc(c.tier)}</div>
+      </div>
+      <div class="champ-body">
+        <span class="tag ${pt.cls}">${pt.label}</span>
+        ${c.notes ? `<div class="champ-notes">${esc(c.notes)}</div>` : ''}
+      </div>
+      <div class="champ-actions">
+        ${canEditPool(pid) ? `
+          <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}" title="Editar">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}" title="Remover">
+            <i class="fa-solid fa-trash"></i>
+          </button>` : ''}
+      </div>
     </div>
   </div>`;
 }
