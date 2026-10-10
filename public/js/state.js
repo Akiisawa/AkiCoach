@@ -111,17 +111,25 @@ export function seedData() {
       { id:uid(), date:off(-4), opponent:'Time B', result:'L', score:'1-3', format:'Bo5', notes:'Perdemos early nas 3 derrotas.' }
     ],
     drafts: [],
-        comps: [
+    comps: [
       {
         id: uid(), name: 'Comp poke com Azir', author: 'Akisawa', authorId: '',
         description: 'Foco em siege com Azir mid, poke de Caitlyn e disengage com Rakan. Testar contra comps de dive.',
         champs: { TOP:'Aatrox', JNG:'Sejuani', MID:'Azir', ADC:'Caitlyn', SUP:'Rakan' },
+        bans: {
+          priority: ['Malphite', 'Vi', 'Nautilus'],
+          optional: ['Zed', 'Katarina', '']
+        },
         status: 'testar', createdAt: Date.now(), updatedAt: Date.now()
       },
       {
-        id: uid(), name: 'Comp dive early', author: 'Coach', authorId: '',
+        id: uid(), name: 'Comp dive early', author: 'Akisawa', authorId: '',
         description: 'Renekton + Vi pra forçar early game e snowball. Fraco contra poke.',
         champs: { TOP:'Renekton', JNG:'Vi', MID:'Ahri', ADC:'Kai\'Sa', SUP:'Nautilus' },
+        bans: {
+          priority: ['Poppy', 'Janna', 'Sylas'],
+          optional: ['Milio', 'Gragas', 'Fiora']
+        },
         status: 'aprovada', createdAt: Date.now(), updatedAt: Date.now()
       }
     ],

@@ -796,6 +796,26 @@ export function modalComp(id) {
       ${field('Suporte', `<input list="champ-list" name="SUP" value="${esc(c?.champs?.SUP || '')}" placeholder="Campeão...">`)}
     </div>
 
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border-soft)">
+      <i class="fa-solid fa-ban" style="color:#ff9b9b;font-size:12px"></i>
+      <span style="font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff9b9b">Bans Prioritários</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      ${field('Ban 1', `<input list="champ-list" name="BAN_P1" value="${esc(c?.bans?.priority?.[0] || '')}" placeholder="Campeão...">`)}
+      ${field('Ban 2', `<input list="champ-list" name="BAN_P2" value="${esc(c?.bans?.priority?.[1] || '')}" placeholder="Campeão...">`)}
+      ${field('Ban 3', `<input list="champ-list" name="BAN_P3" value="${esc(c?.bans?.priority?.[2] || '')}" placeholder="Campeão...">`)}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border-soft)">
+      <i class="fa-solid fa-ban" style="color:#a8bcd4;font-size:12px"></i>
+      <span style="font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#a8bcd4">Bans Opcionais</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      ${field('Ban 1', `<input list="champ-list" name="BAN_O1" value="${esc(c?.bans?.optional?.[0] || '')}" placeholder="Campeão...">`)}
+      ${field('Ban 2', `<input list="champ-list" name="BAN_O2" value="${esc(c?.bans?.optional?.[1] || '')}" placeholder="Campeão...">`)}
+      ${field('Ban 3', `<input list="champ-list" name="BAN_O3" value="${esc(c?.bans?.optional?.[2] || '')}" placeholder="Campeão...">`)}
+    </div>
+
     ${field('Descrição / Estratégia', `<textarea name="description" maxlength="600" placeholder="Como jogar, quando usar, pontos fortes e fracos...">${esc(c?.description || '')}</textarea>`)}
 
     ${statusField}
@@ -819,6 +839,19 @@ export function modalComp(id) {
         SUP: (d.SUP || '').trim(),
       };
 
+            const bans = {
+        priority: [
+          (d.BAN_P1 || '').trim(),
+          (d.BAN_P2 || '').trim(),
+          (d.BAN_P3 || '').trim(),
+        ],
+        optional: [
+          (d.BAN_O1 || '').trim(),
+          (d.BAN_O2 || '').trim(),
+          (d.BAN_O3 || '').trim(),
+        ],
+      };
+
       if (c) {
         // Só o dono ou coach pode editar
         if (playerMode && c.authorId !== authorId) {
@@ -829,6 +862,7 @@ export function modalComp(id) {
           name: d.name.trim(),
           description: (d.description || '').trim(),
           champs,
+          bans,
           updatedAt: Date.now(),
         });
         if (canEditStatus && d.status) c.status = d.status;
@@ -839,6 +873,7 @@ export function modalComp(id) {
           name: d.name.trim(),
           description: (d.description || '').trim(),
           champs,
+          bans,
           author: authorNick,
           authorId,
           status: canEditStatus && d.status ? d.status : 'testar',
@@ -867,6 +902,8 @@ export function modalViewComp(id) {
   };
   const meta = statusMeta[c.status] || statusMeta.testar;
   const champs = c.champs || {};
+  const bansPrio = (c.bans?.priority || ['', '', '']);
+  const bansOpt = (c.bans?.optional || ['', '', '']);
 
   const splashUrl = (name) =>
     `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champIconName(name)}_0.jpg`;
@@ -882,6 +919,21 @@ export function modalViewComp(id) {
       <div class="read-role-content">
         <span class="read-role-label">${label}</span>
         <span class="read-role-champ ${hasChamp ? '' : 'empty'}">${hasChamp ? esc(champ) : '—'}</span>
+      </div>
+    </div>`;
+  };
+
+    const banRow = (label, champ) => {
+    const hasChamp = !!champ;
+    return `
+    <div class="read-ban-row ${hasChamp ? '' : 'empty'}">
+      ${hasChamp ? `
+        <div class="read-ban-splash" style="background-image:url('${splashUrl(champ)}')"></div>
+        <div class="read-ban-overlay"></div>
+      ` : ''}
+      <div class="read-ban-content">
+        <span class="read-ban-label">${label}</span>
+        <span class="read-ban-champ ${hasChamp ? '' : 'empty'}">${hasChamp ? esc(champ) : '—'}</span>
       </div>
     </div>`;
   };
@@ -920,6 +972,28 @@ export function modalViewComp(id) {
               ${roleRow('MID', champs.MID)}
               ${roleRow('ADC', champs.ADC)}
               ${roleRow('SUPORTE', champs.SUP)}
+            </div>
+          </div>
+
+                    <div class="read-section">
+            <div class="read-section-title" style="color:#ff9b9b">
+              <i class="fa-solid fa-ban" style="color:#ff9b9b"></i> Bans Prioritários
+            </div>
+            <div class="read-bans">
+              ${banRow('BAN 1', bansPrio[0])}
+              ${banRow('BAN 2', bansPrio[1])}
+              ${banRow('BAN 3', bansPrio[2])}
+            </div>
+          </div>
+
+          <div class="read-section">
+            <div class="read-section-title" style="color:#a8bcd4">
+              <i class="fa-solid fa-ban" style="color:#a8bcd4"></i> Bans Opcionais
+            </div>
+            <div class="read-bans">
+              ${banRow('BAN 1', bansOpt[0])}
+              ${banRow('BAN 2', bansOpt[1])}
+              ${banRow('BAN 3', bansOpt[2])}
             </div>
           </div>
 

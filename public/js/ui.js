@@ -954,6 +954,24 @@ export function viewComps() {
         ${roleLine('SUP', 'SUP', champs.SUP)}
       </div>
 
+      ${(c.bans?.priority?.filter(Boolean).length || c.bans?.optional?.filter(Boolean).length) ? `
+      <div class="comp-bans">
+        ${c.bans.priority?.filter(Boolean).length ? `
+          <div class="comp-ban-line">
+            <span class="comp-ban-label" style="color:#ff9b9b">
+              <i class="fa-solid fa-ban"></i> Prioridade
+            </span>
+            <span class="comp-ban-champs">${c.bans.priority.filter(Boolean).map(esc).join(', ')}</span>
+          </div>` : ''}
+        ${c.bans.optional?.filter(Boolean).length ? `
+          <div class="comp-ban-line">
+            <span class="comp-ban-label" style="color:#a8bcd4">
+              <i class="fa-solid fa-ban"></i> Opcional
+            </span>
+            <span class="comp-ban-champs">${c.bans.optional.filter(Boolean).map(esc).join(', ')}</span>
+          </div>` : ''}
+      </div>` : ''}
+
       ${c.description ? `<div class="comp-desc">${esc(c.description)}</div>` : ''}
 
       <div class="comp-read-hint">
