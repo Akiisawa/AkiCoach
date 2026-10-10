@@ -917,7 +917,7 @@ export function viewComps() {
     const isCoach = !playerMode;
     const champs = c.champs || {};
 
-    return `<div class="comp-card">
+    return `<div class="comp-card" data-act="view-comp" data-id="${c.id}" title="Clique para ler">
       <div class="comp-card-head">
         <div style="flex:1;min-width:0">
           <div class="comp-title">${esc(c.name || 'Sem nome')}</div>
@@ -940,6 +940,10 @@ export function viewComps() {
       </div>
 
       ${c.description ? `<div class="comp-desc">${esc(c.description)}</div>` : ''}
+
+      <div class="comp-read-hint">
+        <i class="fa-solid fa-expand"></i> Clique para ler a composição completa
+      </div>
 
       <div class="comp-actions">
         ${isCoach && c.status !== 'aprovada' ? `

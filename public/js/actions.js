@@ -7,7 +7,7 @@ import {
   getAccountByRiotId, getSummonerByPuuid, getRankedStats,
   getChampionMastery, fetchPlayerStats, setCachedStats
 } from './riot-api.js';
-import { setPlayerIndex, removePlayerIndex } from './firebase.js';
+import { setPlayerIndex, removePlayerIndex, dbUpdate } from './firebase.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -291,12 +291,51 @@ export function modalTeam() {
     <div class="row-2">
       ${field('Nome do time', `<input name="name" value="${esc(state.team.name)}" maxlength="40">`)}
       ${field('Tag', `<input name="tag" value="${esc(state.team.tag)}" maxlength="6">`)}
+    </div>
+    ${field('Seu nome (aparece como autor das composições)', `
+      <input name="coachName" value="${esc(state.coachName || '')}" maxlength="30" placeholder="Ex: Akisawa">
+    `)}
+    <div style="font-size:11px;color:var(--muted);margin-top:-6px">
+      <i class="fa-solid fa-info-circle"></i> Esse nome é usado como autor em novas composições.
     </div>`;
+
   openModal({
     title: 'Editar Time', icon: 'fa-gear', body,
-    onSubmit: d => {
+    onSubmit: async d => {
+      const oldCoachName = state.coachName;
+      const newCoachName = (d.coachName || '').trim() || 'Coach';
+
       state.team.name = d.name.trim() || 'Time';
       state.team.tag = (d.tag.trim() || 'TAG').toUpperCase();
+      state.coachName = newCoachName;
+
+      // Atualiza perfil no Firebase
+      if (state.user?.uid) {
+        try {
+          await dbUpdate(`users/${state.user.uid}/profile`, {
+            displayName: newCoachName
+          });
+        } catch (e) {
+          console.warn('Falha ao atualizar perfil no Firebase:', e);
+        }
+      }
+
+      // Atualiza composições antigas criadas pelo coach
+      if (oldCoachName && oldCoachName !== newCoachName && Array.isArray(state.comps)) {
+        let changed = 0;
+        state.comps.forEach(c => {
+          if (c.authorId === '' && c.author === oldCoachName) {
+            c.author = newCoachName;
+            changed++;
+          }
+        });
+        if (changed > 0) {
+          toastIcon(`Time atualizado · ${changed} composição(ões) renomeadas`);
+          save(); render();
+          return;
+        }
+      }
+
       save(); render(); toastIcon('Time atualizado');
     }
   });
@@ -609,7 +648,8 @@ export function bindActions() {
       }
       case 'del-draft': state.drafts = state.drafts.filter(x => x.id !== id); save(); render(); toastIcon('Draft removido'); break;
       
-            case 'new-comp': modalComp(); break;
+      case 'new-comp': modalComp(); break;
+      case 'view-comp': modalViewComp(id); break;
       case 'edit-comp': modalComp(id); break;
       case 'del-comp': modalConfirm('Excluir composição', 'Remover esta composição?', () => {
         state.comps = (state.comps || []).filter(x => x.id !== id);
@@ -630,7 +670,7 @@ export function bindActions() {
         if (c) { c.status = 'testar'; c.updatedAt = Date.now(); save(); render(); toastIcon('Marcada para testar', 'fa-flask'); }
         break;
       }
-      
+
       case 'new-note': modalNote(); break;
       case 'edit-note': modalNote(id); break;
       case 'del-note': modalConfirm('Excluir anotação', 'Remover esta anotação?', () => {
@@ -724,7 +764,7 @@ export function modalComp(id) {
   // Autor/permissões
   const authorNick = playerMode
     ? (window.__akiPlayerNick || 'Jogador')
-    : (state.user?.displayName || state.user?.email?.split('@')[0] || 'Coach');
+    : (state.coachName || state.user?.displayName || state.user?.email?.split('@')[0] || 'Coach');
   const authorId = playerMode ? (window.__akiCurrentPlayer || '') : '';
 
   // Modo jogador não pode editar status
@@ -807,4 +847,92 @@ export function modalComp(id) {
       toastIcon(c ? 'Composição atualizada' : 'Composição enviada');
     }
   });
+}
+
+/* ═══════════════════════════════════════
+   MODAL: Ver Composição (leitura)
+   ═══════════════════════════════════════ */
+export function modalViewComp(id) {
+  const c = (state.comps || []).find(x => x.id === id);
+  if (!c) return;
+
+  const statusMeta = {
+    testar:   { label: 'Testar',   color: '#f7bd4a', icon: 'fa-flask' },
+    aprovada: { label: 'Aprovada', color: '#5ee08c', icon: 'fa-circle-check' },
+    recusada: { label: 'Recusada', color: '#ff9b9b', icon: 'fa-circle-xmark' },
+  };
+  const meta = statusMeta[c.status] || statusMeta.testar;
+  const champs = c.champs || {};
+
+  const roleRow = (label, champ) => `
+    <div class="read-role-row">
+      <span class="read-role-label">${label}</span>
+      <span class="read-role-champ ${champ ? '' : 'empty'}">${champ ? esc(champ) : '—'}</span>
+    </div>`;
+
+  const root = $('#modal-root');
+  root.innerHTML = `
+    <div class="modal-backdrop">
+      <div class="modal read-modal">
+        <div class="modal-head">
+          <i class="fa-solid fa-layer-group" style="color:var(--primary)"></i>
+          <h3>${esc(c.name || 'Sem nome')}</h3>
+          <button class="icon-btn" data-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body read-body">
+          <div class="read-meta">
+            <span class="comp-status" style="color:${meta.color};border-color:${meta.color}40;background:${meta.color}15">
+              <i class="fa-solid ${meta.icon}"></i> ${meta.label}
+            </span>
+            <span class="read-author">
+              <i class="fa-solid fa-user-pen"></i> ${esc(c.author || 'Anônimo')}
+            </span>
+            ${c.updatedAt ? `
+              <span class="read-date">
+                <i class="fa-regular fa-clock"></i>
+                ${new Date(c.updatedAt).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+              </span>` : ''}
+          </div>
+
+          <div class="read-section">
+            <div class="read-section-title">
+              <i class="fa-solid fa-users"></i> Composição
+            </div>
+            <div class="read-roles">
+              ${roleRow('TOP', champs.TOP)}
+              ${roleRow('JUNGLE', champs.JNG)}
+              ${roleRow('MID', champs.MID)}
+              ${roleRow('ADC', champs.ADC)}
+              ${roleRow('SUPORTE', champs.SUP)}
+            </div>
+          </div>
+
+          ${c.description ? `
+            <div class="read-section">
+              <div class="read-section-title">
+                <i class="fa-solid fa-scroll"></i> Descrição / Estratégia
+              </div>
+              <div class="read-description">${esc(c.description)}</div>
+            </div>` : `
+            <div class="read-section">
+              <div class="read-section-title">
+                <i class="fa-solid fa-scroll"></i> Descrição
+              </div>
+              <div class="read-description empty">
+                <i class="fa-solid fa-circle-info"></i> Nenhuma descrição fornecida.
+              </div>
+            </div>`}
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn primary" data-close>
+            <i class="fa-solid fa-check"></i> Fechar
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  const backdrop = $('.modal-backdrop', root);
+  backdrop.addEventListener('mousedown', e => { if (e.target === backdrop) closeModal(); });
+  $$('[data-close]', root).forEach(b => b.addEventListener('click', closeModal));
+  document.addEventListener('keydown', escHandler);
 }
