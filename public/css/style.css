@@ -471,10 +471,24 @@ body.player-mode .side-foot{display:none}
   width:44px;height:44px;border-radius:7px;flex:0 0 44px;
   display:grid;place-items:center;font-weight:800;font-size:16px;
   background:linear-gradient(145deg,#132033,#0a101a);
-  border:1px solid rgba(74,158,255,.25);color:var(--silver);overflow:hidden;
+  border:1px solid rgba(74,158,255,.25);color:var(--silver);
+  overflow:hidden;position:relative;
   box-shadow:inset 0 0 12px rgba(74,158,255,.15);
 }
-.avatar img{width:100%;height:100%;border-radius:6px;object-fit:cover}
+.avatar-initials{
+  position:absolute;inset:0;
+  display:grid;place-items:center;
+  font-weight:800;font-size:16px;
+  color:var(--silver);
+  z-index:0;
+  pointer-events:none;
+}
+.avatar img{
+  position:relative;z-index:1;
+  width:100%;height:100%;
+  border-radius:6px;object-fit:cover;
+  display:block;
+}
 .player-card .nick{font-size:15px;font-weight:800;color:var(--silver);letter-spacing:.02em}
 .player-card .sub{font-size:11.5px;color:var(--muted)}
 .pill{
@@ -486,18 +500,41 @@ body.player-mode .side-foot{display:none}
 .pill.staff{background:rgba(74,158,255,.13);color:var(--primary-light);border:1px solid rgba(74,158,255,.35)}
 .pill.inativo{background:rgba(120,140,163,.13);color:var(--muted);border:1px solid #2a3644}
 
-.riot-line{
+.riot-info{
+  display:flex;flex-direction:column;gap:3px;
   font-size:11px;color:var(--muted);
+  margin:2px 0 2px 0;
+}
+.riot-info.empty{display:none}
+
+.riot-line-1,.riot-line-2{
   display:flex;align-items:center;gap:6px;
+  min-width:0;
+}
+.riot-line-1 i,.riot-line-2 i{flex:0 0 12px;text-align:center;font-size:10px}
+.riot-line-1 .riot-name,
+.riot-line-2 .riot-rank{
+  flex:1;min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  min-height:16px;line-height:16px;
 }
-.riot-line.empty{display:none}
-.riot-line .badge-riot{
-  font-size:9.5px;color:var(--primary-light);font-weight:700;
-  display:inline-flex;align-items:center;gap:4px;
+.riot-line-2{color:var(--silver-2);font-weight:600}
+
+.badge-riot{
+  flex:0 0 auto;
+  font-size:9px;font-weight:700;
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 5px;border-radius:20px;
 }
-.riot-line .badge-riot i{font-size:9px}
+.badge-riot.ok{
+  color:var(--primary-light);
+  background:rgba(74,158,255,.12);
+  border:1px solid rgba(74,158,255,.3);
+}
+.badge-riot.warn{
+  color:#f7bd4a;
+  background:rgba(245,158,11,.12);
+  border:1px solid rgba(245,158,11,.3);
+}
 
 .pool-header{
   font-size:10px;text-transform:uppercase;letter-spacing:.14em;
@@ -519,6 +556,15 @@ body.player-mode .side-foot{display:none}
   font-size:11px;padding:3px 8px;border-radius:4px;
   background:rgba(74,158,255,.06);border:1px solid var(--border);color:var(--silver-2);
 }
+
+.champ-mini.more{
+  background:rgba(74,158,255,.12);
+  border-color:rgba(74,158,255,.4);
+  color:var(--primary-light);
+  font-weight:800;
+  cursor:help;
+}
+
 .champ-mini.s{
   border-color:rgba(74,158,255,.65);color:var(--silver);
   background:rgba(74,158,255,.14);box-shadow:0 0 8px rgba(74,158,255,.2);
@@ -805,10 +851,17 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   width:90px;height:90px;border-radius:50%;flex:0 0 90px;
   border:2px solid var(--primary);overflow:hidden;position:relative;
   background:linear-gradient(145deg,#132033,#0a101a);
-  display:grid;place-items:center;font-size:28px;font-weight:800;color:var(--silver);
+  display:grid;place-items:center;
   box-shadow:0 0 30px rgba(74,158,255,.4),inset 0 0 20px rgba(74,158,255,.1);
 }
-.pd-avatar img{width:100%;height:100%;object-fit:cover}
+.pd-avatar .avatar-initials{
+  font-size:28px;color:var(--silver);
+}
+.pd-avatar img{
+  position:relative;z-index:1;
+  width:100%;height:100%;object-fit:cover;
+}
+
 .pd-level{
   position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
   background:var(--primary);color:#04070c;font-size:10px;font-weight:800;
