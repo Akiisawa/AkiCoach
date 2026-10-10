@@ -21,42 +21,6 @@
   --radius:6px;
 }
 
-[data-theme="light"]{
-  --bg:#f2f6fb;
-  --panel:#ffffff;
-  --panel2:#f7fafd;
-  --border:#cfdae7;
-  --border-soft:#e2e9f1;
-  --primary:#0a5fb8;
-  --primary-light:#1a7de0;
-  --primary-glow:rgba(10,95,184,.2);
-  --accent:#0088cc;
-  --silver:#0e1a2a;
-  --silver-2:#2a3b52;
-  --text:#1a2332;
-  --muted:#5a6a7d;
-}
-[data-theme="light"] .sidebar{background:linear-gradient(180deg,#fff,#eef4fb);border-right-color:var(--border)}
-[data-theme="light"] .card,
-[data-theme="light"] .stat,
-[data-theme="light"] .player-card,
-[data-theme="light"] .champ-card,
-[data-theme="light"] .note-card,
-[data-theme="light"] .opp-card,
-[data-theme="light"] .modal{background:linear-gradient(165deg,#fff,#f5f9fd)}
-[data-theme="light"] .cal-day,
-[data-theme="light"] .ev-row,
-[data-theme="light"] .scrim-row,
-[data-theme="light"] .task-row,
-[data-theme="light"] .match-row{background:#fff}
-[data-theme="light"] .topbar{background:rgba(245,249,253,.85)}
-[data-theme="light"] .modal-backdrop{background:rgba(230,238,248,.8)}
-[data-theme="light"] .slot-row input,
-[data-theme="light"] .field input,
-[data-theme="light"] .field select,
-[data-theme="light"] .field textarea{background:#f5f9fd}
-[data-theme="light"] .brand-logo{filter:none}
-
 html,body{height:100%}
 body{
   background:
@@ -1497,4 +1461,133 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   .read-ban-content{padding:10px 14px;gap:12px}
   .read-ban-label{flex:0 0 60px;font-size:9.5px}
   .read-ban-champ{font-size:15px}
+}
+
+/* ═══ CHARTS ═══ */
+.chart-wrap{
+  position:relative;
+  width:100%;
+  height:260px;
+  padding:8px 4px;
+}
+
+/* ═══ TOURNAMENT / SCRIM CARDS ═══ */
+.tournament-card,
+.scrim-card{
+  background:linear-gradient(165deg,#0a121e,#060b14);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  transition:.18s;
+  border-left:3px solid var(--border);
+}
+.tournament-card:hover,
+.scrim-card:hover{
+  border-color:rgba(74,158,255,.4);
+  border-left-color:var(--primary);
+  background:#0a1420;
+}
+.tournament-card.win{border-left-color:var(--green)}
+.tournament-card.loss{border-left-color:var(--red)}
+
+.tourn-head,
+.scrim-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.tourn-head .res-badge,
+.scrim-head .res-badge{flex:0 0 32px}
+
+.tourn-name,
+.scrim-vs{
+  font-weight:700;
+  font-size:15px;
+  color:var(--silver);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  line-height:1.2;
+}
+.tourn-name i{color:#f7bd4a;font-size:13px}
+
+.tourn-meta,
+.scrim-meta{
+  font-size:11.5px;
+  color:var(--muted);
+  margin-top:4px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+}
+.tourn-meta i,
+.scrim-meta i{font-size:10px;opacity:.75}
+
+.tourn-score,
+.scrim-score{
+  font-weight:800;
+  font-size:18px;
+  color:var(--gold2);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;
+  padding:0 6px;
+}
+
+.tourn-roster{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+  padding:8px 10px;
+  background:#070d16;
+  border:1px solid var(--border-soft);
+  border-radius:5px;
+  font-size:11.5px;
+}
+.tourn-roster-label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.14em;
+  color:var(--muted);
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-right:4px;
+}
+.tourn-roster-label i{color:#ff9b9b;opacity:.75}
+.opp-player{
+  display:inline-flex;
+  align-items:center;
+  font-size:11.5px;
+  font-weight:600;
+  color:var(--silver-2);
+  background:rgba(74,158,255,.08);
+  border:1px solid rgba(74,158,255,.2);
+  padding:2px 8px;
+  border-radius:4px;
+}
+
+.tourn-notes{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+  padding:8px 10px;
+  background:rgba(74,158,255,.03);
+  border-left:2px solid rgba(74,158,255,.3);
+  border-radius:4px;
+  font-style:italic;
+}
+
+/* ═══ RESPONSIVO EXTRA ═══ */
+@media(max-width:980px){
+  .chart-wrap{height:220px}
+  .tourn-head,
+  .scrim-head{flex-wrap:wrap}
+  .tourn-score,
+  .scrim-score{order:10;width:100%;text-align:left;padding:0}
 }

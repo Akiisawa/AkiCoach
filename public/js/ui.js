@@ -66,22 +66,42 @@ function canEditPool(pid) {
 export function viewDash() {
   const rec = scrimRecord();
   const titulares = state.players.filter(p => p.status === 'titular');
-  const totalChamps = new Set(
-    state.players.flatMap(p => safePool(p).map(c => c.champ))
-  ).size;
+  const totalChamps = new Set(state.players.flatMap(p => safePool(p).map(c => c.champ))).size;
   const alertas = titulares.filter(p => poolCount(p, ['S','A']) < 3);
   const ups = upcoming(6);
   const pendingTasks = state.tasks.filter(t => !t.done);
+
+  // Combinado: scrims + campeonatos
+  const allGames = [
+    ...state.scrims.map(s => ({ ...s, kind: 'scrim' })),
+    ...state.tournaments.map(t => ({ ...t, kind: 'torneio' }))
+  ];
+  const wins = allGames.filter(g => g.result === 'W').length;
+  const losses = allGames.filter(g => g.result === 'L').length;
+  const draws = allGames.filter(g => g.result === 'D').length;
+  const total = allGames.length;
+  const wr = total ? Math.round(wins / total * 100) : 0;
+
+  const tournW = state.tournaments.filter(t => t.result === 'W').length;
+  const tournL = state.tournaments.filter(t => t.result === 'L').length;
+  const tournWR = (tournW + tournL) ? Math.round(tournW / (tournW + tournL) * 100) : 0;
 
   return `
   <div class="grid g-4" style="margin-bottom:18px">
     <div class="stat"><div class="lbl">Roster Ativo</div><div class="val">${titulares.length}</div><div class="note">${state.players.length} no total</div></div>
     <div class="stat blue"><div class="lbl">Campeões Mapeados</div><div class="val">${totalChamps}</div><div class="note">em ${state.players.length} pools</div></div>
-    <div class="stat teal"><div class="lbl">Scrims Registradas</div><div class="val">${rec.total}</div><div class="note">${rec.w}V — ${rec.l}D</div></div>
-    <div class="stat ${rec.total ? (rec.w/Math.max(rec.total,1)>=.5?'green':'red') : ''}">
-      <div class="lbl">Winrate Scrim</div>
-      <div class="val">${rec.total ? Math.round(rec.w/rec.total*100)+'%' : '—'}</div>
-      <div class="note">${rec.total ? 'nas partidas' : 'sem dados'}</div>
+    <div class="stat orange"><div class="lbl">Campeonatos</div><div class="val">${state.tournaments.length}</div><div class="note">${tournW}V — ${tournL}D (${tournWR}%)</div></div>
+    <div class="stat ${wr >= 50 ? 'green' : 'red'}"><div class="lbl">Winrate Geral</div><div class="val">${total ? wr + '%' : '—'}</div><div class="note">${total ? `${wins}V — ${losses}D${draws ? ` — ${draws}E` : ''}` : 'sem dados'}</div></div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-chart-line"></i> Evolução (últimos 10 jogos)</h3></div>
+      <div class="chart-wrap"><canvas id="chart-winrate"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-chart-pie"></i> Resultados Gerais</h3></div>
+      <div class="chart-wrap"><canvas id="chart-results"></canvas></div>
     </div>
   </div>
 
@@ -141,17 +161,17 @@ export function viewDash() {
     <div class="card">
       <div class="card-head"><h3><i class="fa-solid fa-flag"></i> Últimos Resultados</h3><div class="spacer"></div>
         <button class="btn sm" data-act="nav" data-view="scrims">Ver todos</button></div>
-      ${state.scrims.length ? `<div style="display:flex;flex-direction:column;gap:8px">
-        ${[...state.scrims].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4).map(s => `
-          <div class="scrim-row" style="grid-template-columns:56px 1fr 60px auto">
-            <div class="res-badge res-${s.result}">${s.result}</div>
+      ${allGames.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+        ${allGames.sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(g => `
+          <div class="scrim-row" style="grid-template-columns:46px 1fr 60px auto">
+            <div class="res-badge res-${g.result}">${g.result}</div>
             <div>
-              <div style="font-weight:600;font-size:13px">vs ${esc(s.opponent)}</div>
-              <div style="font-size:11px;color:var(--muted)">${fmtShort(s.date)} · ${esc(s.format)}</div>
+              <div style="font-weight:600;font-size:13px">${g.kind === 'torneio' ? `<i class="fa-solid fa-trophy" style="color:#f7bd4a;font-size:11px"></i> ` : ''}vs ${esc(g.opponent)}</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtShort(g.date)} · ${esc(g.format)}${g.kind === 'torneio' && g.stage ? ' · ' + esc(g.stage) : ''}</div>
             </div>
-            <div style="font-weight:800;color:var(--gold2);text-align:right">${esc(s.score)}</div>
+            <div style="font-weight:800;color:var(--gold2);text-align:right">${esc(g.score||'—')}</div>
           </div>`).join('')}
-      </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}
+      </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma partida registrada.</div>`}
     </div>
   </div>
 
@@ -179,6 +199,211 @@ export function viewDash() {
       </div>
     </div>
   </div>`;
+}
+
+/* ═══════════════════════════════════════
+   CHARTS (Chart.js)
+   ═══════════════════════════════════════ */
+let _charts = {};
+
+export function bindDashboardCharts() {
+  if (typeof window.Chart === 'undefined') return;
+
+  // Limpa charts antigos
+  Object.values(_charts).forEach(c => { try { c.destroy(); } catch {} });
+  _charts = {};
+
+  const allGames = [
+    ...state.scrims.map(s => ({ ...s, kind: 'scrim' })),
+    ...state.tournaments.map(t => ({ ...t, kind: 'torneio' }))
+  ].sort((a, b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+
+  /* Chart 1: Evolução (últimos 10 jogos) */
+  const trendCanvas = document.getElementById('chart-winrate');
+  if (trendCanvas) {
+    const last = allGames.slice(-10);
+    const labels = last.map((g, i) => `J${i+1}`);
+    let w = 0, l = 0;
+    const winRateData = last.map(g => {
+      if (g.result === 'W') w++;
+      else if (g.result === 'L') l++;
+      return (w + l) ? Math.round(w / (w + l) * 100) : 0;
+    });
+
+    _charts.winrate = new Chart(trendCanvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Winrate acumulado (%)',
+          data: winRateData,
+          borderColor: '#4a9eff',
+          backgroundColor: 'rgba(74,158,255,.15)',
+          borderWidth: 2,
+          fill: true,
+          tension: .35,
+          pointBackgroundColor: '#4a9eff',
+          pointBorderColor: '#04070c',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0a1420',
+            borderColor: 'rgba(74,158,255,.4)',
+            borderWidth: 1,
+            titleColor: '#d8e3f0',
+            bodyColor: '#a8bcd4',
+            padding: 10,
+            callbacks: {
+              title: (items) => {
+                const i = items[0].dataIndex;
+                const g = last[i];
+                return `${g.kind === 'torneio' ? '🏆' : '🎯'} vs ${g.opponent} (${g.result})`;
+              },
+              label: (item) => `Winrate: ${item.parsed.y}%`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100,
+            ticks: { color: '#5e7288', font: { size: 11 }, callback: v => v + '%' },
+            grid: { color: 'rgba(74,158,255,.08)' }
+          },
+          x: {
+            ticks: { color: '#5e7288', font: { size: 11 } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  /* Chart 2: Resultados gerais */
+  const resultsCanvas = document.getElementById('chart-results');
+  if (resultsCanvas) {
+    const scrimsW = state.scrims.filter(s => s.result === 'W').length;
+    const scrimsL = state.scrims.filter(s => s.result === 'L').length;
+    const scrimsD = state.scrims.filter(s => s.result === 'D').length;
+    const tournW = state.tournaments.filter(t => t.result === 'W').length;
+    const tournL = state.tournaments.filter(t => t.result === 'L').length;
+
+    _charts.results = new Chart(resultsCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Scrim Vitórias', 'Scrim Derrotas', 'Scrim Empates', 'Torneio Vitórias', 'Torneio Derrotas'],
+        datasets: [{
+          data: [scrimsW, scrimsL, scrimsD, tournW, tournL],
+          backgroundColor: [
+            'rgba(34,197,94,.85)',
+            'rgba(224,82,82,.85)',
+            'rgba(120,140,163,.6)',
+            'rgba(245,158,11,.85)',
+            'rgba(168,85,247,.85)'
+          ],
+          borderColor: '#04070c',
+          borderWidth: 3,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: '#a8bcd4',
+              font: { size: 11 },
+              padding: 12,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0a1420',
+            borderColor: 'rgba(74,158,255,.4)',
+            borderWidth: 1,
+            titleColor: '#d8e3f0',
+            bodyColor: '#a8bcd4',
+            padding: 10
+          }
+        }
+      }
+    });
+  }
+}
+
+/* ═══════════════════════════════════════
+   VIEW: CAMPEONATOS
+   ═══════════════════════════════════════ */
+export function viewTournaments() {
+  const list = [...(state.tournaments || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const playerMode = isPlayerMode();
+
+  const w = list.filter(t => t.result === 'W').length;
+  const l = list.filter(t => t.result === 'L').length;
+  const wr = (w + l) ? Math.round(w / (w + l) * 100) : 0;
+
+  const roleRoster = (label, nick) => nick
+    ? `<span class="opp-player" title="${label}: ${esc(nick)}">${esc(nick)}</span>`
+    : '';
+
+  return `
+  <div class="grid g-3" style="margin-bottom:18px">
+    <div class="stat orange"><div class="lbl">Total de Partidas</div><div class="val">${list.length}</div></div>
+    <div class="stat green"><div class="lbl">Vitórias</div><div class="val">${w}</div></div>
+    <div class="stat ${wr >= 50 ? 'green' : 'red'}"><div class="lbl">Winrate</div><div class="val">${(w+l) ? wr + '%' : '—'}</div><div class="note">${w}V — ${l}D</div></div>
+  </div>
+
+  ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn primary" data-act="new-tournament"><i class="fa-solid fa-plus"></i> Registrar Campeonato</button>
+  </div>` : ''}
+
+  ${list.length ? `<div style="display:flex;flex-direction:column;gap:12px">
+    ${list.map(t => `
+      <div class="tournament-card ${t.result === 'W' ? 'win' : t.result === 'L' ? 'loss' : ''}">
+        <div class="tourn-head">
+          <div class="res-badge res-${t.result}">${t.result}</div>
+          <div style="flex:1;min-width:0">
+            <div class="tourn-name"><i class="fa-solid fa-trophy"></i> ${esc(t.name)}</div>
+            <div class="tourn-meta">
+              <span><i class="fa-regular fa-calendar"></i> ${fmtShort(t.date)}</span>
+              <span>·</span>
+              <span><i class="fa-solid fa-swords"></i> vs ${esc(t.opponent)}</span>
+              ${t.stage ? `<span>·</span><span><i class="fa-solid fa-flag-checkered"></i> ${esc(t.stage)}</span>` : ''}
+              ${t.format ? `<span>·</span><span>${esc(t.format)}</span>` : ''}
+            </div>
+          </div>
+          <div class="tourn-score">${esc(t.score || '—')}</div>
+          ${!playerMode ? `
+            <div style="display:flex;gap:4px">
+              <button class="icon-btn" data-act="edit-tournament" data-id="${t.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn" data-act="del-tournament" data-id="${t.id}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>` : ''}
+        </div>
+        ${t.opponentRoster && Object.values(t.opponentRoster).some(Boolean) ? `
+          <div class="tourn-roster">
+            <span class="tourn-roster-label"><i class="fa-solid fa-users-viewfinder"></i> Roster inimigo:</span>
+            ${roleRoster('TOP', t.opponentRoster.TOP)}
+            ${roleRoster('JNG', t.opponentRoster.JNG)}
+            ${roleRoster('MID', t.opponentRoster.MID)}
+            ${roleRoster('ADC', t.opponentRoster.ADC)}
+            ${roleRoster('SUP', t.opponentRoster.SUP)}
+          </div>` : ''}
+        ${t.notes ? `<div class="tourn-notes">${esc(t.notes)}</div>` : ''}
+      </div>
+    `).join('')}
+  </div>` : `<div class="empty"><i class="fa-solid fa-trophy" style="font-size:26px;opacity:.4"></i><br>Nenhum campeonato registrado ainda.</div>`}`;
 }
 
 export function evRowHTML(e) {
@@ -507,13 +732,15 @@ export function viewMatrix() {
   </div>`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: SCRIMS
-   ═══════════════════════════════════════ */
+
 export function viewScrims() {
   const rec = scrimRecord();
   const sorted = [...state.scrims].sort((a,b) => b.date.localeCompare(a.date));
   const playerMode = isPlayerMode();
+
+  const roleRoster = (label, nick) => nick
+    ? `<span class="opp-player" title="${label}: ${esc(nick)}">${esc(nick)}</span>`
+    : '';
 
   return `
   <div class="grid g-3" style="margin-bottom:18px">
@@ -524,30 +751,40 @@ export function viewScrims() {
   ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-scrim"><i class="fa-solid fa-plus"></i> Registrar Scrim</button>
   </div>` : ''}
-  ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:9px">
-    ${sorted.map(s => `<div class="scrim-row">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="res-badge res-${s.result}">${s.result}</div>
-        <div style="font-size:11px;color:var(--muted);font-weight:700">${fmtShort(s.date)}</div>
+  ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:12px">
+    ${sorted.map(s => `
+      <div class="scrim-card">
+        <div class="scrim-head">
+          <div class="res-badge res-${s.result}">${s.result}</div>
+          <div style="flex:1;min-width:0">
+            <div class="scrim-vs">vs ${esc(s.opponent)}</div>
+            <div class="scrim-meta">
+              <span><i class="fa-regular fa-calendar"></i> ${fmtShort(s.date)}</span>
+              ${s.format ? `<span>·</span><span>${esc(s.format)}</span>` : ''}
+            </div>
+          </div>
+          <div class="scrim-score">${esc(s.score || '—')}</div>
+          ${!playerMode ? `
+            <div style="display:flex;gap:4px">
+              <button class="icon-btn" data-act="edit-scrim" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn" data-act="del-scrim" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>
+            </div>` : ''}
+        </div>
+        ${s.opponentRoster && Object.values(s.opponentRoster).some(Boolean) ? `
+          <div class="tourn-roster">
+            <span class="tourn-roster-label"><i class="fa-solid fa-users-viewfinder"></i> Roster inimigo:</span>
+            ${roleRoster('TOP', s.opponentRoster.TOP)}
+            ${roleRoster('JNG', s.opponentRoster.JNG)}
+            ${roleRoster('MID', s.opponentRoster.MID)}
+            ${roleRoster('ADC', s.opponentRoster.ADC)}
+            ${roleRoster('SUP', s.opponentRoster.SUP)}
+          </div>` : ''}
+        ${s.notes ? `<div class="tourn-notes">${esc(s.notes)}</div>` : ''}
       </div>
-      <div style="min-width:0">
-        <div style="font-weight:700;font-size:14px;color:var(--gold2)">vs ${esc(s.opponent)}</div>
-        ${s.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.notes)}</div>`:''}
-      </div>
-      <div style="font-weight:800;color:var(--gold2);text-align:center;font-size:15px">${esc(s.score)}</div>
-      <div style="font-size:11.5px;color:var(--muted);text-align:center">${esc(s.format)}</div>
-      <div style="display:flex;gap:4px;justify-content:flex-end">
-        ${!playerMode ? `
-          <button class="icon-btn" data-act="edit-scrim" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
-          <button class="icon-btn" data-act="del-scrim" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
-      </div>
-    </div>`).join('')}
+    `).join('')}
   </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: DRAFT
-   ═══════════════════════════════════════ */
 export function viewDraft() {
   const d = state.draft;
   const playerMode = isPlayerMode();
@@ -617,9 +854,6 @@ export function bindDraft() {
   });
 }
 
-/* ═══════════════════════════════════════
-   VIEW: TASKS
-   ═══════════════════════════════════════ */
 export function viewTasks() {
   const playerMode = isPlayerMode();
   const myNick = window.__akiPlayerNick || '';
@@ -660,9 +894,7 @@ export function viewTasks() {
   </div>` : `<div class="empty"><i class="fa-solid fa-list-check" style="font-size:26px;opacity:.4"></i><br>${playerMode ? 'Você não tem tarefas atribuídas.' : 'Nenhuma tarefa.'}</div>`}`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: OPPONENTS
-   ═══════════════════════════════════════ */
+
 export function viewOpponents() {
   const playerMode = isPlayerMode();
   return `
@@ -693,9 +925,7 @@ export function viewOpponents() {
   </div>` : `<div class="empty"><i class="fa-solid fa-chess" style="font-size:26px;opacity:.4"></i><br>Nenhum oponente mapeado.</div>`}`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: NOTES
-   ═══════════════════════════════════════ */
+
 export function viewNotes() {
   const playerMode = isPlayerMode();
   const sorted = [...state.notes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
@@ -721,9 +951,6 @@ export function viewNotes() {
   </div>` : `<div class="empty"><i class="fa-solid fa-pen" style="font-size:26px;opacity:.4"></i><br>Nenhuma anotação.</div>`}`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: PLAYER DETAIL
-   ═══════════════════════════════════════ */
 export function viewPlayerDetail() {
   const pid = window.__akiCurrentPlayer || null;
   const p = state.players.find(x => x.id === pid);
@@ -899,9 +1126,6 @@ function renderStats(s) {
   </div>`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: COMPS
-   ═══════════════════════════════════════ */
 export function viewComps() {
   const playerMode = isPlayerMode();
   const myId = window.__akiCurrentPlayer || null;

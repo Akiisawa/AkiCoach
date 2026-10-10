@@ -369,6 +369,7 @@ export function modalChamp(pid, id) {
 
 export function modalScrim(id) {
   const s = id ? state.scrims.find(x => x.id === id) : null;
+  const or = s?.opponentRoster || {};
   const body = `
     <div class="row-2">
       ${field('Data', `<input type="date" name="date" required value="${esc(s?.date || TODAY)}">`)}
@@ -379,15 +380,105 @@ export function modalScrim(id) {
       ${field('Placar', `<input name="score" value="${esc(s?.score || '')}" placeholder="3-1">`)}
       ${field('Formato', `<select name="format">${['Bo1','Bo2','Bo3','Bo5','Bloco 3h'].map(f => `<option ${s?.format===f?'selected':''}>${f}</option>`).join('')}</select>`)}
     </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border-soft)">
+      <i class="fa-solid fa-users-viewfinder" style="color:#ff9b9b;font-size:12px"></i>
+      <span style="font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff9b9b">Roster Inimigo</span>
+    </div>
+    <div class="row-3">
+      ${field('Top', `<input name="oTOP" value="${esc(or.TOP||'')}" placeholder="Nick">`)}
+      ${field('Jungle', `<input name="oJNG" value="${esc(or.JNG||'')}" placeholder="Nick">`)}
+      ${field('Mid', `<input name="oMID" value="${esc(or.MID||'')}" placeholder="Nick">`)}
+    </div>
+    <div class="row-2">
+      ${field('ADC', `<input name="oADC" value="${esc(or.ADC||'')}" placeholder="Nick">`)}
+      ${field('Suporte', `<input name="oSUP" value="${esc(or.SUP||'')}" placeholder="Nick">`)}
+    </div>
+
     ${field('Notas', `<textarea name="notes">${esc(s?.notes || '')}</textarea>`)}`;
+
   openModal({
-    title: s ? 'Editar Scrim' : 'Registrar Scrim', icon: 'fa-flag', body,
+    title: s ? 'Editar Scrim' : 'Registrar Scrim', icon: 'fa-flag', body, wide: true,
     onSubmit: d => {
       if (!d.opponent.trim()) return false;
-      const payload = { date: d.date, opponent: d.opponent.trim(), result: d.result, score: d.score.trim(), format: d.format, notes: d.notes.trim() };
+      const payload = {
+        date: d.date,
+        opponent: d.opponent.trim(),
+        result: d.result,
+        score: d.score.trim(),
+        format: d.format,
+        notes: d.notes.trim(),
+        opponentRoster: {
+          TOP: (d.oTOP||'').trim(),
+          JNG: (d.oJNG||'').trim(),
+          MID: (d.oMID||'').trim(),
+          ADC: (d.oADC||'').trim(),
+          SUP: (d.oSUP||'').trim(),
+        }
+      };
       if (s) Object.assign(s, payload);
       else state.scrims.push({ id: uid(), ...payload });
       save(); render(); toastIcon(s ? 'Scrim atualizada' : 'Scrim registrada');
+    }
+  });
+}
+
+export function modalTournament(id) {
+  const t = id ? state.tournaments.find(x => x.id === id) : null;
+  const or = t?.opponentRoster || {};
+  const body = `
+    ${field('Nome do campeonato', `<input name="name" required maxlength="60" value="${esc(t?.name || '')}" placeholder="Ex: CBLOL Academy, Liga X">`)}
+    <div class="row-3">
+      ${field('Data', `<input type="date" name="date" required value="${esc(t?.date || TODAY)}">`)}
+      ${field('Adversário', `<input name="opponent" required value="${esc(t?.opponent || '')}">`)}
+      ${field('Fase', `<select name="stage">${['Grupos','Quartas','Semifinal','Final','Play-in','Amistoso'].map(f => `<option ${t?.stage===f?'selected':''}>${f}</option>`).join('')}</select>`)}
+    </div>
+    <div class="row-3">
+      ${field('Resultado', `<select name="result">${[['W','Vitória'],['L','Derrota']].map(([v,l]) => `<option value="${v}" ${t?.result===v?'selected':''}>${l}</option>`).join('')}</select>`)}
+      ${field('Placar', `<input name="score" value="${esc(t?.score || '')}" placeholder="2-1">`)}
+      ${field('Formato', `<select name="format">${['Bo1','Bo2','Bo3','Bo5'].map(f => `<option ${t?.format===f?'selected':''}>${f}</option>`).join('')}</select>`)}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border-soft)">
+      <i class="fa-solid fa-users-viewfinder" style="color:#ff9b9b;font-size:12px"></i>
+      <span style="font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff9b9b">Roster Inimigo</span>
+    </div>
+    <div class="row-3">
+      ${field('Top', `<input name="oTOP" value="${esc(or.TOP||'')}" placeholder="Nick">`)}
+      ${field('Jungle', `<input name="oJNG" value="${esc(or.JNG||'')}" placeholder="Nick">`)}
+      ${field('Mid', `<input name="oMID" value="${esc(or.MID||'')}" placeholder="Nick">`)}
+    </div>
+    <div class="row-2">
+      ${field('ADC', `<input name="oADC" value="${esc(or.ADC||'')}" placeholder="Nick">`)}
+      ${field('Suporte', `<input name="oSUP" value="${esc(or.SUP||'')}" placeholder="Nick">`)}
+    </div>
+
+    ${field('Notas', `<textarea name="notes" placeholder="MVP, jogada chave, o que ajustar...">${esc(t?.notes || '')}</textarea>`)}`;
+
+  openModal({
+    title: t ? 'Editar Campeonato' : 'Registrar Campeonato', icon: 'fa-trophy', body, wide: true,
+    onSubmit: d => {
+      if (!d.name.trim() || !d.opponent.trim()) return false;
+      const payload = {
+        name: d.name.trim(),
+        date: d.date,
+        opponent: d.opponent.trim(),
+        stage: d.stage,
+        result: d.result,
+        score: d.score.trim(),
+        format: d.format,
+        notes: d.notes.trim(),
+        opponentRoster: {
+          TOP: (d.oTOP||'').trim(),
+          JNG: (d.oJNG||'').trim(),
+          MID: (d.oMID||'').trim(),
+          ADC: (d.oADC||'').trim(),
+          SUP: (d.oSUP||'').trim(),
+        }
+      };
+      if (t) Object.assign(t, payload);
+      else state.tournaments.push({ id: uid(), ...payload });
+      save(); render(); toastIcon(t ? 'Campeonato atualizado' : 'Campeonato registrado');
     }
   });
 }
@@ -565,6 +656,7 @@ export function bindActions() {
       'new-event', 'edit-event', 'del-event',
       'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
       'new-scrim', 'edit-scrim', 'del-scrim',
+      'new-tournament', 'edit-tournament', 'del-tournament',
       'save-draft', 'clear-draft', 'load-draft', 'del-draft',
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',
@@ -639,7 +731,11 @@ export function bindActions() {
       case 'del-scrim': modalConfirm('Excluir scrim', 'Remover este registro?', () => {
         state.scrims = state.scrims.filter(x => x.id !== id); save(); render(); toastIcon('Scrim removida');
       }); break;
-
+      case 'new-tournament': modalTournament(); break;
+      case 'edit-tournament': modalTournament(id); break;
+      case 'del-tournament': modalConfirm('Excluir campeonato', 'Remover este registro?', () => {
+        state.tournaments = state.tournaments.filter(x => x.id !== id); save(); render(); toastIcon('Campeonato removido');
+      }); break;
       case 'save-draft': modalSaveDraft(); break;
       case 'clear-draft': modalConfirm('Limpar draft', 'Apagar todos os picks e bans?', () => {
         state.draft = { blue:{ bans:['','','','',''], picks:['','','','',''] }, red:{ bans:['','','','',''], picks:['','','','',''] } };
@@ -703,14 +799,7 @@ export function bindActions() {
         break;
       }
 
-      case 'toggle-theme': {
-        state.theme = state.theme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', state.theme);
-        localStorage.setItem('aki_theme', state.theme);
-        const icon = t.querySelector('i');
-        if (icon) icon.className = state.theme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-        break;
-      }
+
 
       case 'export': exportData(); break;
       case 'import': importData(); break;

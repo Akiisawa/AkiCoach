@@ -5,8 +5,8 @@ import {
 } from './state.js';
 import {
   viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
-  viewScrims, viewDraft, viewTasks, viewOpponents, viewNotes,
-  viewPlayerDetail, viewComps, bindDraft, toastIcon,
+  viewScrims, viewTournaments, viewDraft, viewTasks, viewOpponents, viewNotes,
+  viewPlayerDetail, viewComps, bindDraft, bindDashboardCharts, toastIcon,
   shiftCal, resetCal
 } from './ui.js';
 import {
@@ -28,6 +28,7 @@ const VIEWS = [
   { id:'pools', icon:'fa-dragon', label:'Champion Pools' },
   { id:'matrix', icon:'fa-table', label:'Matriz do Time' },
   { id:'scrims', icon:'fa-flag', label:'Scrims' },
+  { id:'tournaments', icon:'fa-trophy', label:'Campeonatos' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
   { id:'comps', icon:'fa-layer-group', label:'Composições' },
   { id:'tasks', icon:'fa-list-check', label:'Tarefas' },
@@ -41,6 +42,7 @@ const PLAYER_VIEWS = [
   { id:'pools', icon:'fa-dragon', label:'Pools do Time' },
   { id:'matrix', icon:'fa-table', label:'Matriz do Time' },
   { id:'scrims', icon:'fa-flag', label:'Scrims' },
+  { id:'tournaments', icon:'fa-trophy', label:'Campeonatos' },
   { id:'tasks', icon:'fa-list-check', label:'Minhas Tarefas' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
   { id:'comps', icon:'fa-layer-group', label:'Composições' },
@@ -55,6 +57,7 @@ const TITLES = {
   pools: ['Champion Pools', 'Campeões por jogador, tier e tipo de pick'],
   matrix: ['Matriz do Time', 'Cobertura de campeões do roster'],
   scrims: ['Scrims', 'Histórico e resultados de treinos'],
+  tournaments: ['Campeonatos', 'Partidas oficiais e torneios'],
   draft: ['Draft Board', 'Simulador de picks e bans'],
   comps: ['Composições', 'Comps do time para testar e aprovar'],
   tasks: ['Tarefas', 'Homework e metas individuais'],
@@ -64,16 +67,17 @@ const TITLES = {
 };
 
 let currentView = 'dash';
-let isSignUp = false;
 let playerModeActive = false;
 
 function renderNav() {
   const views = playerModeActive ? PLAYER_VIEWS : VIEWS;
   const counts = playerModeActive ? {} : {
+    agenda: state.events.filter(e => e.date >= TODAY).length,
     roster: state.players.length,
     scrims: state.scrims.length,
+    tournaments: state.tournaments.length,
     notes: state.notes.length,
-    agenda: state.events.filter(e => e.date >= TODAY).length,
+    tasks: state.tasks.filter(t => !t.done).length,
     opponents: state.opponents.length
   };
   $('#nav').innerHTML = views.map(v => `
@@ -103,12 +107,13 @@ function go(view) {
 function renderView() {
   const v = $('#view');
   switch (currentView) {
-    case 'dash': v.innerHTML = viewDash(); break;
+    case 'dash': v.innerHTML = viewDash(); bindDashboardCharts(); break;
     case 'agenda': v.innerHTML = viewAgenda(); break;
     case 'roster': v.innerHTML = viewRoster(); break;
     case 'pools': v.innerHTML = viewPools(); break;
     case 'matrix': v.innerHTML = viewMatrix(); break;
     case 'scrims': v.innerHTML = viewScrims(); break;
+    case 'tournaments': v.innerHTML = viewTournaments(); break;
     case 'draft': v.innerHTML = viewDraft(); bindDraft(); break;
     case 'comps': v.innerHTML = viewComps(); break;
     case 'tasks': v.innerHTML = viewTasks(); break;
@@ -302,12 +307,6 @@ async function initApp(user) {
   listenTeam(user.uid, () => { renderNav(); renderView(); });
   $('#user-name').textContent = state.coachName;
 
-  const savedTheme = localStorage.getItem('aki_theme') || 'dark';
-  state.theme = savedTheme;
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  const themeIcon = document.querySelector('[data-act="toggle-theme"] i');
-  if (themeIcon) themeIcon.className = savedTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-
   renderNav();
   go('dash');
   tickClock();
@@ -399,7 +398,7 @@ document.addEventListener('keydown', e => {
   if (playerModeActive) return;
   if (e.target.matches('input, textarea, select')) return;
   if (e.ctrlKey || e.metaKey) return;
-  const map = { g:'agenda', d:'draft', r:'roster', p:'pools', t:'tasks', s:'scrims', n:'notes', o:'opponents', m:'matrix' };
+  const map = { g:'agenda', d:'draft', r:'roster', p:'pools', t:'tasks', s:'scrims', n:'notes', o:'opponents', m:'matrix', c:'comps' };
   const key = e.key.toLowerCase();
   if (map[key]) { go(map[key]); e.preventDefault(); }
 });
