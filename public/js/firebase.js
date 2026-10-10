@@ -1,11 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile
+  signOut, onAuthStateChanged, updateProfile, signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getDatabase, ref, set, get, update, push, remove,
-  onValue, serverTimestamp
+  getDatabase, ref, set, get, update, remove,
+  onValue
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -32,6 +32,16 @@ export async function signUp(email, password, displayName) {
 export async function signIn(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user;
+}
+
+export async function signInAsPlayer() {
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (e) {
+    console.warn('Anon auth falhou:', e);
+    return null;
+  }
 }
 
 export function logOut() { return signOut(auth); }

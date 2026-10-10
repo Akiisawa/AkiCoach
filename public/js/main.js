@@ -16,7 +16,7 @@ import {
 } from './actions.js';
 import {
   auth, signIn, logOut, onAuth, dbGet, dbSet,
-  getPlayerIndex
+  getPlayerIndex, signInAsPlayer
 } from './firebase.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -247,6 +247,9 @@ function bindPlayerForm() {
         errEl.textContent = 'PIN incorreto.';
         return;
       }
+
+      // Autentica anonimamente no Firebase pra poder salvar
+      await signInAsPlayer();
 
       const session = {
         teamUid: entry.teamUid,
