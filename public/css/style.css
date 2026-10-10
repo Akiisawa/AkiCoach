@@ -878,9 +878,8 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   font-family:'Segoe UI',monospace;
 }
 
-body.player-mode .sidebar{display:none}
-body.player-mode .app{grid-template-columns:1fr}
-body.player-mode .brand{display:none}
+body.player-mode .side-foot{display:none}
+body.player-mode .nav button{pointer-events:auto}
 
 .player-topbar{
   display:flex;align-items:center;gap:8px;

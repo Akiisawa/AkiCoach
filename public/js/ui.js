@@ -35,6 +35,10 @@ export const scrimRecord = () => {
   return { w, l, total: state.scrims.length };
 };
 
+function isPlayerMode() {
+  return document.body.classList.contains('player-mode');
+}
+
 export function viewDash() {
   const rec = scrimRecord();
   const titulares = state.players.filter(p => p.status === 'titular');
@@ -159,8 +163,9 @@ export function evRowHTML(e) {
       <div class="title">${esc(e.title)}</div>
       <div class="meta">${t.label}${e.time&&e.time!=='00:00'?' · '+e.time:''}${e.duration?' · '+e.duration+'min':''}${e.opponent?' · vs '+esc(e.opponent):''}</div>
     </div>
-    <button class="icon-btn" data-act="edit-event" data-id="${e.id}"><i class="fa-solid fa-pen"></i></button>
-    <button class="icon-btn" data-act="del-event" data-id="${e.id}"><i class="fa-solid fa-trash"></i></button>
+    ${!isPlayerMode() ? `
+      <button class="icon-btn" data-act="edit-event" data-id="${e.id}"><i class="fa-solid fa-pen"></i></button>
+      <button class="icon-btn" data-act="del-event" data-id="${e.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
   </div>`;
 }
 
@@ -195,6 +200,8 @@ export function viewAgenda() {
     .filter(e => { const d = parseKey(e.date); return d.getFullYear()===y && d.getMonth()===m; })
     .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
 
+  const playerMode = isPlayerMode();
+
   return `
   <div class="cal-bar">
     <button class="btn sm" data-act="cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
@@ -202,18 +209,18 @@ export function viewAgenda() {
     <button class="btn sm" data-act="cal-next"><i class="fa-solid fa-chevron-right"></i></button>
     <button class="btn sm ghost" data-act="cal-today">Hoje</button>
     <div style="flex:1"></div>
-    <button class="btn primary" data-act="new-event" data-date="${TODAY}"><i class="fa-solid fa-plus"></i> Novo Evento</button>
+    ${!playerMode ? `<button class="btn primary" data-act="new-event" data-date="${TODAY}"><i class="fa-solid fa-plus"></i> Novo Evento</button>` : ''}
   </div>
   <div class="cal-grid" style="margin-bottom:8px">${WEEK.map(w => `<div class="cal-dow">${w}</div>`).join('')}</div>
   <div class="cal-grid">
     ${cells.map(c => {
       const evs = eventsOn(c.key);
       const isToday = c.key === TODAY;
-      return `<div class="cal-day ${c.out?'out':''} ${isToday?'today':''}" data-act="new-event" data-date="${c.key}">
+      return `<div class="cal-day ${c.out?'out':''} ${isToday?'today':''}" ${!playerMode ? `data-act="new-event" data-date="${c.key}"` : ''}>
         <div class="cal-daynum"><span>${c.day}</span>${evs.length?`<span style="color:var(--gold)">${evs.length}</span>`:''}</div>
         ${evs.slice(0,3).map(e => {
           const t = EVENT_TYPES[e.type] || EVENT_TYPES.reuniao;
-          return `<div class="cal-ev" style="border-left-color:${t.color}" data-act="edit-event" data-id="${e.id}" title="${esc(e.title)} — ${e.time}">
+          return `<div class="cal-ev" style="border-left-color:${t.color}" ${!playerMode ? `data-act="edit-event" data-id="${e.id}"` : ''} title="${esc(e.title)} — ${e.time}">
             ${e.time !== '00:00' ? e.time + ' ' : ''}${esc(e.title)}</div>`;
         }).join('')}
         ${evs.length>3?`<div class="cal-more">+${evs.length-3} mais</div>`:''}
@@ -253,9 +260,27 @@ export function viewRoster() {
 }
 
 export function playerCardHTML(p) {
-  const initials = p.nick.slice(0,2).toUpperCase();
-  const sorted = [...p.pool].sort((a,b) => TIERS.indexOf(a.tier)-TIERS.indexOf(b.tier));
-  const hasRiot = p.riot && p.riot.gameName;
+  const initials = p.nick.slice(0, 2).toUpperCase();
+  const sorted = [...p.pool].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
+  const hasRiot = p.riot && p.riot.gameName && p.riot.puuid;
+  const riotPartial = p.riot && p.riot.gameName && !p.riot.puuid;
+
+  const riotLine = hasRiot
+    ? `<i class="fa-solid fa-gamepad"></i> ${esc(p.riot.gameName)}#${esc(p.riot.tagLine)}
+       ${p.riot.rank ? `<span style="color:var(--muted)"> · ${esc(p.riot.rank)}</span>` : ''}
+       <span class="badge-riot"><i class="fa-solid fa-circle-check"></i> Riot</span>`
+    : riotPartial
+      ? `<i class="fa-solid fa-triangle-exclamation" style="color:#f7bd4a"></i>
+         <span style="color:#f7bd4a">${esc(p.riot.gameName)}#${esc(p.riot.tagLine)} · sem dados</span>`
+      : '';
+
+  const poolHTML = sorted.length
+    ? sorted.slice(0, 9).map(c =>
+        `<span class="champ-mini ${c.tier.toLowerCase()}" title="${esc(PICK_TYPES[c.type]?.label || '')}">${esc(c.champ)} <b style="opacity:.65">${c.tier}</b></span>`
+      ).join('')
+      + (sorted.length > 9 ? `<span class="champ-mini">+${sorted.length - 9}</span>` : '')
+    : `<span class="champ-mini empty">Sem campeões na pool</span>`;
+
   return `<div class="player-card">
     <div class="role-tag"><i class="fa-solid ${roleIcon(p.role)}"></i> ${p.role}</div>
     <div class="top">
@@ -263,21 +288,16 @@ export function playerCardHTML(p) {
       <div style="flex:1;min-width:0">
         <div class="nick">${esc(p.nick)}</div>
         <div class="sub">${esc(p.name || roleName(p.role))}</div>
-        <div style="margin-top:5px">
-          <span class="pill ${p.status}">${p.status}</span>
-          ${hasRiot ? `<span style="font-size:10px;color:var(--teal);margin-left:6px"><i class="fa-solid fa-circle-check"></i> Riot</span>` : ''}
-        </div>
+        <div style="margin-top:6px"><span class="pill ${p.status}">${p.status}</span></div>
       </div>
     </div>
-    ${hasRiot ? `<div style="font-size:11px;color:var(--muted);margin-bottom:4px"><i class="fa-solid fa-gamepad"></i> ${esc(p.riot.gameName)}#${esc(p.riot.tagLine)}${p.riot.rank ? ' · ' + esc(p.riot.rank) : ''}</div>` : ''}
-    <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:700;margin-bottom:2px">
-      Pool (${p.pool.length})
+    <div class="riot-line ${riotLine ? '' : 'empty'}">${riotLine || '&nbsp;'}</div>
+    <div class="pool-header">
+      <span>Pool</span>
+      <span class="count">${p.pool.length}</span>
     </div>
-    ${sorted.length ? `<div class="champ-mini-list">
-      ${sorted.slice(0,8).map(c => `<span class="champ-mini ${c.tier.toLowerCase()}" title="${esc(PICK_TYPES[c.type]?.label||'')}">${esc(c.champ)} <b style="opacity:.65">${c.tier}</b></span>`).join('')}
-      ${sorted.length>8?`<span class="champ-mini">+${sorted.length-8}</span>`:''}
-    </div>` : `<div style="font-size:12px;color:var(--muted);font-style:italic">Sem campeões</div>`}
-    <div style="display:flex;gap:6px;margin-top:12px;padding-top:11px;border-top:1px solid var(--border-soft)">
+    <div class="champ-mini-list">${poolHTML}</div>
+    <div class="card-actions">
       <button class="btn sm primary" data-act="open-player-detail" data-id="${p.id}" style="flex:1;justify-content:center">
         <i class="fa-solid fa-chart-line"></i> Dashboard
       </button>
@@ -298,6 +318,7 @@ export function viewPools() {
     activePlayerId = state.players[0].id;
   const p = state.players.find(x => x.id === activePlayerId);
   const byTier = t => p.pool.filter(c => c.tier === t);
+  const playerMode = isPlayerMode();
 
   return `
   <div class="tabs">
@@ -319,7 +340,7 @@ export function viewPools() {
       ${TIERS.map(t => `<span style="padding:4px 10px;border-radius:6px;background:#101823;border:1px solid var(--border)">
         <b class="tier ${t}" style="display:inline-grid;width:18px;height:18px;font-size:10px;vertical-align:middle;margin-right:5px">${t}</b>${byTier(t).length}</span>`).join('')}
     </div>
-    <button class="btn primary" data-act="new-champ" data-pid="${p.id}"><i class="fa-solid fa-plus"></i> Campeão</button>
+    ${!playerMode ? `<button class="btn primary" data-act="new-champ" data-pid="${p.id}"><i class="fa-solid fa-plus"></i> Campeão</button>` : ''}
   </div>
   ${p.pool.length ? TIERS.filter(t => byTier(t).length).map(t => `
     <div style="margin-bottom:22px">
@@ -338,6 +359,7 @@ export function viewPools() {
 
 export function champCardHTML(c, pid) {
   const pt = PICK_TYPES[c.type] || PICK_TYPES.blind;
+  const playerMode = isPlayerMode();
   return `<div class="champ-card">
     <div class="hd">
       <div class="cname">${esc(c.champ)}</div>
@@ -347,8 +369,9 @@ export function champCardHTML(c, pid) {
     ${c.notes?`<div class="champ-notes">${esc(c.notes)}</div>`:''}
     <div style="display:flex;gap:4px;margin-top:auto;padding-top:9px;border-top:1px solid var(--border-soft)">
       <div style="flex:1"></div>
-      <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
-      <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+      ${!playerMode ? `
+        <button class="icon-btn" data-act="edit-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-pen"></i></button>
+        <button class="icon-btn" data-act="del-champ" data-pid="${pid}" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
     </div>
   </div>`;
 }
@@ -398,15 +421,17 @@ export function viewMatrix() {
 export function viewScrims() {
   const rec = scrimRecord();
   const sorted = [...state.scrims].sort((a,b) => b.date.localeCompare(a.date));
+  const playerMode = isPlayerMode();
+
   return `
   <div class="grid g-3" style="margin-bottom:18px">
     <div class="stat"><div class="lbl">Total de Scrims</div><div class="val">${rec.total}</div></div>
     <div class="stat green"><div class="lbl">Vitórias</div><div class="val">${rec.w}</div></div>
     <div class="stat red"><div class="lbl">Derrotas</div><div class="val">${rec.l}</div></div>
   </div>
-  <div style="display:flex;gap:10px;margin-bottom:16px">
+  ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-scrim"><i class="fa-solid fa-plus"></i> Registrar Scrim</button>
-  </div>
+  </div>` : ''}
   ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:9px">
     ${sorted.map(s => `<div class="scrim-row">
       <div style="display:flex;align-items:center;gap:10px">
@@ -420,8 +445,9 @@ export function viewScrims() {
       <div style="font-weight:800;color:var(--gold2);text-align:center;font-size:15px">${esc(s.score)}</div>
       <div style="font-size:11.5px;color:var(--muted);text-align:center">${esc(s.format)}</div>
       <div style="display:flex;gap:4px;justify-content:flex-end">
-        <button class="icon-btn" data-act="edit-scrim" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
-        <button class="icon-btn" data-act="del-scrim" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>
+        ${!playerMode ? `
+          <button class="icon-btn" data-act="edit-scrim" data-id="${s.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" data-act="del-scrim" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>
     </div>`).join('')}
   </div>` : `<div class="empty"><i class="fa-solid fa-flag" style="font-size:26px;opacity:.4"></i><br>Nenhuma scrim registrada.</div>`}`;
@@ -429,19 +455,25 @@ export function viewScrims() {
 
 export function viewDraft() {
   const d = state.draft;
+  const playerMode = isPlayerMode();
   const slot = (side, kind, i) => `
     <div class="slot-row ${kind==='ban'?'ban':''}">
       <span class="idx">${kind==='ban'?'B':'P'}${i+1}</span>
       <input list="champ-list" data-draft="${side}.${kind}.${i}"
-             value="${esc(d[side][kind][i]||'')}" placeholder="${kind==='ban'?'Ban…':'Pick…'}" autocomplete="off">
+             value="${esc(d[side][kind][i]||'')}" placeholder="${kind==='ban'?'Ban…':'Pick…'}" autocomplete="off"
+             ${playerMode ? 'readonly' : ''}>
     </div>`;
   return `
+  ${!playerMode ? `
   <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
     <button class="btn primary" data-act="save-draft"><i class="fa-solid fa-floppy-disk"></i> Salvar Draft</button>
     <button class="btn" data-act="clear-draft"><i class="fa-solid fa-eraser"></i> Limpar</button>
     <div style="flex:1"></div>
     <span style="font-size:12px;color:var(--muted)">${state.drafts.length} draft(s) salvo(s)</span>
-  </div>
+  </div>` : `
+  <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">
+    <i class="fa-solid fa-eye"></i> Modo visualização
+  </div>`}
   <div class="draft-board">
     <div class="side blue">
       <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
@@ -459,7 +491,7 @@ export function viewDraft() {
       ${[0,1,2,3,4].map(i => slot('red','picks',i)).join('')}
     </div>
   </div>
-  ${state.drafts.length ? `
+  ${!playerMode && state.drafts.length ? `
   <div class="card" style="margin-top:22px">
     <div class="card-head"><h3><i class="fa-solid fa-floppy-disk"></i> Drafts Salvos</h3></div>
     <div class="grid g-auto">
@@ -481,6 +513,7 @@ export function viewDraft() {
 }
 
 export function bindDraft() {
+  if (isPlayerMode()) return;
   document.querySelectorAll('[data-draft]').forEach(inp => {
     inp.addEventListener('input', () => {
       const [side, kind, i] = inp.dataset.draft.split('.');
@@ -490,13 +523,26 @@ export function bindDraft() {
 }
 
 export function viewTasks() {
-  const sorted = [...state.tasks].sort((a,b) => (a.done===b.done) ? (a.due||'').localeCompare(b.due||'') : (a.done?1:-1));
+  const playerMode = isPlayerMode();
+  const myNick = window.__akiPlayerNick || '';
+
+  let tasks = [...state.tasks];
+
+  if (playerMode && myNick) {
+    tasks = tasks.filter(t => t.assignee === myNick);
+  }
+
+  tasks.sort((a, b) => (a.done === b.done)
+    ? (a.due || '').localeCompare(b.due || '')
+    : (a.done ? 1 : -1));
+
   return `
+  ${!playerMode ? `
   <div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-task"><i class="fa-solid fa-plus"></i> Nova Tarefa</button>
-  </div>
-  ${sorted.length ? `<div style="display:flex;flex-direction:column;gap:8px">
-    ${sorted.map(t => `
+  </div>` : ''}
+  ${tasks.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+    ${tasks.map(t => `
       <div class="task-row ${t.done?'done':''}">
         <button class="task-check ${t.done?'checked':''}" data-act="toggle-task" data-id="${t.id}">
           <i class="fa-solid fa-check"></i>
@@ -509,17 +555,19 @@ export function viewTasks() {
             ${t.priority ? ` · <span style="color:${t.priority==='alta'?'#ff9b9b':t.priority==='média'?'#f7bd4a':'var(--muted)'}">${t.priority}</span>` : ''}
           </div>
         </div>
-        <button class="icon-btn" data-act="edit-task" data-id="${t.id}"><i class="fa-solid fa-pen"></i></button>
-        <button class="icon-btn" data-act="del-task" data-id="${t.id}"><i class="fa-solid fa-trash"></i></button>
+        ${!playerMode ? `
+          <button class="icon-btn" data-act="edit-task" data-id="${t.id}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" data-act="del-task" data-id="${t.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>`).join('')}
-  </div>` : `<div class="empty"><i class="fa-solid fa-list-check" style="font-size:26px;opacity:.4"></i><br>Nenhuma tarefa.</div>`}`;
+  </div>` : `<div class="empty"><i class="fa-solid fa-list-check" style="font-size:26px;opacity:.4"></i><br>${playerMode ? 'Você não tem tarefas atribuídas.' : 'Nenhuma tarefa.'}</div>`}`;
 }
 
 export function viewOpponents() {
+  const playerMode = isPlayerMode();
   return `
-  <div style="display:flex;gap:10px;margin-bottom:16px">
+  ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-opponent"><i class="fa-solid fa-plus"></i> Adicionar Oponente</button>
-  </div>
+  </div>` : ''}
   ${state.opponents.length ? `<div class="grid g-auto">
     ${state.opponents.map(o => `
       <div class="opp-card">
@@ -528,8 +576,9 @@ export function viewOpponents() {
             <div class="opp-name">${esc(o.name)}</div>
             <div class="opp-tag">${esc(o.tag||'')}</div>
           </div>
-          <button class="icon-btn" data-act="edit-opponent" data-id="${o.id}"><i class="fa-solid fa-pen"></i></button>
-          <button class="icon-btn" data-act="del-opponent" data-id="${o.id}"><i class="fa-solid fa-trash"></i></button>
+          ${!playerMode ? `
+            <button class="icon-btn" data-act="edit-opponent" data-id="${o.id}"><i class="fa-solid fa-pen"></i></button>
+            <button class="icon-btn" data-act="del-opponent" data-id="${o.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
         ${o.playstyle?`<div class="opp-stat"><i class="fa-solid fa-gamepad"></i> ${esc(o.playstyle)}</div>`:''}
         ${o.weakness?`<div class="opp-stat" style="color:#f7bd4a"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(o.weakness)}</div>`:''}
@@ -544,18 +593,20 @@ export function viewOpponents() {
 }
 
 export function viewNotes() {
+  const playerMode = isPlayerMode();
   const sorted = [...state.notes].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   return `
-  <div style="display:flex;gap:10px;margin-bottom:16px">
+  ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-note"><i class="fa-solid fa-plus"></i> Nova Anotação</button>
-  </div>
+  </div>` : ''}
   ${sorted.length ? `<div class="grid g-auto">
     ${sorted.map(n => `
       <div class="note-card">
         <div class="nhead">
           <div class="ntitle">${esc(n.title)}</div>
-          <button class="icon-btn" data-act="edit-note" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>
-          <button class="icon-btn" data-act="del-note" data-id="${n.id}"><i class="fa-solid fa-trash"></i></button>
+          ${!playerMode ? `
+            <button class="icon-btn" data-act="edit-note" data-id="${n.id}"><i class="fa-solid fa-pen"></i></button>
+            <button class="icon-btn" data-act="del-note" data-id="${n.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
         ${n.body?`<div class="nbody">${esc(n.body)}</div>`:''}
         <div class="nfoot">
@@ -564,10 +615,6 @@ export function viewNotes() {
         </div>
       </div>`).join('')}
   </div>` : `<div class="empty"><i class="fa-solid fa-pen" style="font-size:26px;opacity:.4"></i><br>Nenhuma anotação.</div>`}`;
-}
-
-function isPlayerMode() {
-  return document.body.classList.contains('player-mode');
 }
 
 export function viewPlayerDetail() {
@@ -600,23 +647,17 @@ export function viewPlayerDetail() {
       </div>
       ${riot.rank ? `<div class="pd-rank"><i class="fa-solid fa-ranking-star"></i> ${esc(riot.rank)}</div>` : ''}
     </div>
-    ${!playerMode ? `
-      <div class="pd-actions">
-        ${hasRiot ? `
-          <button class="btn primary" data-act="load-stats" data-id="${p.id}">
-            <i class="fa-solid ${stats ? 'fa-rotate' : 'fa-cloud-arrow-down'}"></i>
-            ${stats ? 'Atualizar' : 'Carregar Stats'}
-          </button>
-          <button class="btn" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Riot</button>
-        ` : `<button class="btn primary" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Vincular Riot</button>`}
-      </div>` : (hasRiot ? `
-      <div class="pd-actions">
+    <div class="pd-actions">
+      ${hasRiot ? `
         <button class="btn primary" data-act="load-stats" data-id="${p.id}">
           <i class="fa-solid ${stats ? 'fa-rotate' : 'fa-cloud-arrow-down'}"></i>
           ${stats ? 'Atualizar' : 'Carregar Stats'}
         </button>
-      </div>` : '')}
+        ${!playerMode ? `<button class="btn" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Riot</button>` : ''}
+      ` : (!playerMode ? `<button class="btn primary" data-act="link-riot" data-id="${p.id}"><i class="fa-solid fa-link"></i> Vincular Riot</button>` : '')}
+    </div>
   </div>
+
   ${!hasRiot ? `
     <div class="empty" style="padding:60px 20px">
       <i class="fa-solid ${partial ? 'fa-triangle-exclamation' : 'fa-link-slash'}" style="font-size:34px;opacity:.35;color:${partial ? '#ff9b9b' : 'inherit'}"></i>
@@ -629,7 +670,7 @@ export function viewPlayerDetail() {
         <div style="margin-top:10px;font-size:12px;color:#ff9b9b;max-width:520px;margin-left:auto;margin-right:auto;padding:8px 12px;background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:6px">
           <i class="fa-solid fa-circle-exclamation"></i> ${esc(riot.lastError)}
         </div>` : ''}
-      ${partial ? `
+      ${partial && !playerMode ? `
         <div style="margin-top:16px">
           <button class="btn primary" data-act="link-riot" data-id="${p.id}">
             <i class="fa-solid fa-rotate"></i> Tentar novamente

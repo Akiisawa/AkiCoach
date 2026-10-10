@@ -1,13 +1,13 @@
 import {
   state, ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
-  hashPin, generatePin, getPlayerSession, clearPlayerSession
+  hashPin, generatePin
 } from './state.js';
 import { toast, toastIcon } from './ui.js';
 import {
   getAccountByRiotId, getSummonerByPuuid, getRankedStats,
   getChampionMastery, fetchPlayerStats, setCachedStats
 } from './riot-api.js';
-import { setPlayerIndex, removePlayerIndex, getPlayerIndex } from './firebase.js';
+import { setPlayerIndex, removePlayerIndex } from './firebase.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -23,6 +23,7 @@ export function setCalHandlers(shift, reset) { calShiftFn = shift; calResetFn = 
 
 function render() { if (renderFn) renderFn(); }
 function save() { saveToFirebase().catch(e => console.warn('Save falhou:', e)); }
+function isPlayerMode() { return document.body.classList.contains('player-mode'); }
 
 export function openModal({ title, body, submitLabel = 'Salvar', onSubmit, wide = false, danger = false, icon = 'fa-pen-to-square', onMount }) {
   const root = $('#modal-root');
@@ -229,7 +230,6 @@ export function modalLinkRiot(pid) {
         toastIcon('Buscando dados da Riot...', 'fa-spinner');
 
         const account = await getAccountByRiotId(platform, gameName, tagLine);
-
         const summoner = await getSummonerByPuuid(platform, account.puuid);
 
         let rank = '—';
@@ -493,7 +493,12 @@ export async function loadStatsForPlayer(playerId) {
     toastIcon(`Carregado: ${stats.total} partidas, ${stats.winrate}% WR`, 'fa-circle-check');
   } catch (err) {
     console.error(err);
-    toastIcon(err.message || 'Falha ao buscar', 'fa-circle-xmark');
+    const msg = err.message || '';
+    if (msg.toLowerCase().includes('forbidden') || msg.includes('403')) {
+      toastIcon('Match history indisponível: sua chave Riot não tem acesso a match-v5.', 'fa-triangle-exclamation');
+    } else {
+      toastIcon(err.message || 'Falha ao buscar', 'fa-circle-xmark');
+    }
     const btn = document.querySelector(`[data-act="load-stats"][data-id="${playerId}"]`);
     if (btn) {
       btn.disabled = false;
@@ -508,6 +513,22 @@ export function bindActions() {
     if (!t) return;
     const act = t.dataset.act;
     const id = t.dataset.id;
+
+    const coachOnly = [
+      'new-event', 'edit-event', 'del-event',
+      'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
+      'new-champ', 'edit-champ', 'del-champ',
+      'new-scrim', 'edit-scrim', 'del-scrim',
+      'save-draft', 'clear-draft', 'load-draft', 'del-draft',
+      'new-note', 'edit-note', 'del-note',
+      'new-task', 'edit-task', 'del-task',
+      'new-opponent', 'edit-opponent', 'del-opponent',
+      'export', 'import', 'logout'
+    ];
+    if (isPlayerMode() && coachOnly.includes(act)) {
+      toastIcon('Ação restrita ao coach', 'fa-lock');
+      return;
+    }
 
     switch (act) {
       case 'nav': if (goFn) goFn(t.dataset.view); break;

@@ -34,6 +34,18 @@ const VIEWS = [
   { id:'notes', icon:'fa-pen', label:'Anotações' }
 ];
 
+const PLAYER_VIEWS = [
+  { id:'player', icon:'fa-chart-line', label:'Meu Painel' },
+  { id:'agenda', icon:'fa-calendar-days', label:'Agenda' },
+  { id:'pools', icon:'fa-dragon', label:'Pools do Time' },
+  { id:'matrix', icon:'fa-table', label:'Matriz do Time' },
+  { id:'scrims', icon:'fa-flag', label:'Scrims' },
+  { id:'tasks', icon:'fa-list-check', label:'Minhas Tarefas' },
+  { id:'draft', icon:'fa-chess', label:'Draft Board' },
+  { id:'opponents', icon:'fa-binoculars', label:'Scouting' },
+  { id:'notes', icon:'fa-pen', label:'Anotações' }
+];
+
 const TITLES = {
   dash: ['Dashboard', 'Visão geral do time'],
   agenda: ['Agenda', 'Scrims, partidas, revisões e treinos'],
@@ -45,7 +57,7 @@ const TITLES = {
   tasks: ['Tarefas', 'Homework e metas individuais'],
   opponents: ['Scouting', 'Análise de oponentes'],
   notes: ['Anotações', 'Notas do coach e feedbacks'],
-  player: ['Meu Painel', 'Desempenho individual']
+  player: ['Meu Painel', 'Seu desempenho individual']
 };
 
 let currentView = 'dash';
@@ -53,11 +65,8 @@ let isSignUp = false;
 let playerModeActive = false;
 
 function renderNav() {
-  if (playerModeActive) {
-    $('#nav').innerHTML = '';
-    return;
-  }
-  const counts = {
+  const views = playerModeActive ? PLAYER_VIEWS : VIEWS;
+  const counts = playerModeActive ? {} : {
     agenda: state.events.length,
     roster: state.players.length,
     scrims: state.scrims.length,
@@ -65,7 +74,7 @@ function renderNav() {
     tasks: state.tasks.filter(t => !t.done).length,
     opponents: state.opponents.length
   };
-  $('#nav').innerHTML = VIEWS.map(v => `
+  $('#nav').innerHTML = views.map(v => `
     <button data-act="nav" data-view="${v.id}" class="${currentView===v.id?'active':''}">
       <i class="fa-solid ${v.icon}"></i>
       <span>${v.label}</span>
@@ -74,10 +83,15 @@ function renderNav() {
 }
 
 function go(view) {
+  if (playerModeActive) {
+    const allowed = PLAYER_VIEWS.find(v => v.id === view);
+    if (!allowed) view = 'player';
+  }
   currentView = view;
   renderNav();
   const [t, s] = TITLES[view] || ['Aki Coach', ''];
-  const icon = VIEWS.find(v => v.id === view)?.icon || 'fa-gauge-high';
+  const allViews = playerModeActive ? PLAYER_VIEWS : VIEWS;
+  const icon = allViews.find(v => v.id === view)?.icon || 'fa-gauge-high';
   $('#page-title').innerHTML = `<i class="fa-solid ${icon}"></i> ${t}`;
   $('#page-sub').textContent = s;
   renderView();
@@ -317,16 +331,11 @@ async function initPlayerApp(session) {
     if (!p) return false;
 
     window.__akiCurrentPlayer = session.playerId;
-    currentView = 'player';
+    window.__akiPlayerNick = session.nick;
 
     playerModeActive = true;
-    renderNav();
-
-    const [t] = TITLES.player;
-    $('#page-title').innerHTML = `<i class="fa-solid fa-chart-line"></i> ${t}`;
-    $('#page-sub').textContent = `Bem-vindo, ${p.nick}`;
-    renderView();
     showPlayerApp(session);
+    go('player');
     tickClock();
 
     listenTeam(session.teamUid, () => { renderView(); });
@@ -374,6 +383,7 @@ setPlayerLogoutHandler(() => {
   modalConfirm('Sair', 'Deseja sair da sua conta?', () => {
     clearPlayerSession();
     window.__akiCurrentPlayer = null;
+    window.__akiPlayerNick = null;
     document.body.classList.remove('player-mode');
     playerModeActive = false;
     $('#player-topbar-actions').style.display = 'none';
