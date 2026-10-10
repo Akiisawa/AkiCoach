@@ -360,7 +360,10 @@ body.player-mode .side-foot{display:none}
 .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .g-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.g-auto{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.g-auto{
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  align-items:start;
+}
 
 .stat{
   background:linear-gradient(160deg,#0a121e,#060b14);
@@ -446,8 +449,7 @@ body.player-mode .side-foot{display:none}
   background:linear-gradient(165deg,#0a121e,#060b14);
   border:1px solid var(--border);border-radius:var(--radius);
   padding:15px;position:relative;overflow:hidden;transition:.18s;
-  display:flex;flex-direction:column;
-  min-height:280px;
+  display:flex;flex-direction:column;gap:10px;
 }
 .player-card::before{
   content:'';position:absolute;top:0;right:0;width:60px;height:60px;
@@ -485,12 +487,12 @@ body.player-mode .side-foot{display:none}
 .pill.inativo{background:rgba(120,140,163,.13);color:var(--muted);border:1px solid #2a3644}
 
 .riot-line{
-  font-size:11px;color:var(--muted);margin-bottom:8px;
-  min-height:18px;line-height:18px;
+  font-size:11px;color:var(--muted);
   display:flex;align-items:center;gap:6px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-height:16px;line-height:16px;
 }
-.riot-line.empty{opacity:0;pointer-events:none}
+.riot-line.empty{display:none}
 .riot-line .badge-riot{
   font-size:9.5px;color:var(--primary-light);font-weight:700;
   display:inline-flex;align-items:center;gap:4px;
@@ -499,7 +501,7 @@ body.player-mode .side-foot{display:none}
 
 .pool-header{
   font-size:10px;text-transform:uppercase;letter-spacing:.14em;
-  color:var(--muted);font-weight:700;margin-bottom:6px;
+  color:var(--muted);font-weight:700;
   display:flex;align-items:center;justify-content:space-between;
 }
 .pool-header .count{
@@ -510,8 +512,9 @@ body.player-mode .side-foot{display:none}
 
 .champ-mini-list{
   display:flex;flex-wrap:wrap;gap:5px;
-  min-height:52px;align-content:flex-start;
+  align-content:flex-start;
 }
+
 .champ-mini{
   font-size:11px;padding:3px 8px;border-radius:4px;
   background:rgba(74,158,255,.06);border:1px solid var(--border);color:var(--silver-2);
@@ -530,8 +533,9 @@ body.player-mode .side-foot{display:none}
 
 .card-actions{
   display:flex;gap:6px;
-  margin-top:auto;padding-top:12px;
+  padding-top:10px;
   border-top:1px solid var(--border-soft);
+  margin-top:auto;
 }
 
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}

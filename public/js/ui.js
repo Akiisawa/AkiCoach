@@ -284,7 +284,13 @@ export function playerCardHTML(p) {
   return `<div class="player-card">
     <div class="role-tag"><i class="fa-solid ${roleIcon(p.role)}"></i> ${p.role}</div>
     <div class="top">
-      <div class="avatar">${hasRiot && p.riot.iconId ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${p.riot.iconId}.png" alt="">` : esc(initials)}</div>
+<div class="avatar">
+  ${hasRiot && p.riot.iconId
+    ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.1.1/img/profileicon/${p.riot.iconId}.png"
+            alt=""
+            onerror="this.style.display='none';this.parentElement.textContent='${esc(initials)}'">`
+    : esc(initials)}
+</div>
       <div style="flex:1;min-width:0">
         <div class="nick">${esc(p.nick)}</div>
         <div class="sub">${esc(p.name || roleName(p.role))}</div>
