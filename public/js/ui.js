@@ -1245,3 +1245,163 @@ export function viewComps() {
   ${list.length ? `<div class="grid g-auto">${list.map(cardHTML).join('')}</div>`
     : `<div class="empty"><i class="fa-solid fa-layer-group" style="font-size:26px;opacity:.4"></i><br>Nenhuma composição ainda. ${playerMode ? 'Envie a sua!' : 'Crie a primeira.'}</div>`}`;
 }
+
+export function viewPlayerHome() {
+  const pid = window.__akiCurrentPlayer;
+  const nick = window.__akiPlayerNick || '';
+  const p = state.players.find(x => x.id === pid);
+  if (!p) return `<div class="empty">Jogador não encontrado.</div>`;
+
+  const myTasks = state.tasks.filter(t => t.assignee === nick);
+  const pendingTasks = myTasks.filter(t => !t.done);
+  const doneTasks = myTasks.filter(t => t.done);
+
+  const ups = state.events
+    .filter(e => e.date >= TODAY)
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
+    .slice(0, 4);
+
+  const allGames = [
+    ...state.scrims.map(s => ({ ...s, kind: 'scrim' })),
+    ...state.tournaments.map(t => ({ ...t, kind: 'torneio' }))
+  ];
+  const total = allGames.length;
+  const wins = allGames.filter(g => g.result === 'W').length;
+  const losses = allGames.filter(g => g.result === 'L').length;
+  const wr = total ? Math.round(wins / total * 100) : 0;
+
+  const recentGames = [...allGames]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 4);
+
+  const pool = safePool(p);
+  const poolByTier = TIERS.map(t => pool.filter(c => c.tier === t));
+  const sCount = poolByTier[0].length;
+  const aCount = poolByTier[1].length;
+
+  const myComps = (state.comps || []).filter(c => c.authorId === pid).length;
+
+  return `
+  <div class="player-welcome">
+    <div class="pw-avatar">
+      <span class="avatar-initials">${esc(nick.slice(0,2).toUpperCase())}</span>
+      ${p.riot?.iconId ? `<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${p.riot.iconId}.jpg" alt="" onerror="this.remove()">` : ''}
+    </div>
+    <div class="pw-info">
+      <div class="pw-hi">Bem-vindo, <b>${esc(nick)}</b></div>
+      <div class="pw-sub">
+        <i class="fa-solid ${roleIcon(p.role)}"></i> ${roleName(p.role)}
+        ${p.riot?.rank ? ` · <i class="fa-solid fa-ranking-star"></i> ${esc(p.riot.rank)}` : ''}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-4" style="margin-bottom:18px">
+    <div class="stat"><div class="lbl">Minhas Tarefas</div><div class="val">${pendingTasks.length}</div><div class="note">${doneTasks.length} concluída(s)</div></div>
+    <div class="stat blue"><div class="lbl">Minha Pool</div><div class="val">${pool.length}</div><div class="note">${sCount}S · ${aCount}A</div></div>
+    <div class="stat ${wr >= 50 ? 'green' : 'red'}"><div class="lbl">Winrate do Time</div><div class="val">${total ? wr + '%' : '—'}</div><div class="note">${total ? `${wins}V — ${losses}D` : 'sem dados'}</div></div>
+    <div class="stat orange"><div class="lbl">Minhas Comps</div><div class="val">${myComps}</div><div class="note">composições enviadas</div></div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-calendar-days"></i> Próximos Compromissos</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="agenda">Ver agenda</button>
+      </div>
+      ${ups.length ? `<div style="display:flex;flex-direction:column;gap:8px">${ups.map(evRowHTML).join('')}</div>`
+        : `<div class="empty"><i class="fa-solid fa-calendar-xmark" style="font-size:26px;opacity:.4"></i><br>Nenhum evento agendado.</div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-list-check"></i> Minhas Tarefas</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="tasks">Ver todas</button>
+      </div>
+      ${pendingTasks.length ? `<div style="display:flex;flex-direction:column;gap:7px">
+        ${pendingTasks.slice(0, 5).map(t => `
+          <div class="task-row">
+            <button class="task-check" data-act="toggle-task" data-id="${t.id}"><i class="fa-solid fa-check"></i></button>
+            <div class="task-title">${esc(t.title)}</div>
+            <div class="task-due">${t.due ? fmtShort(t.due) : ''}</div>
+          </div>`).join('')}
+      </div>` : `<div class="empty"><i class="fa-solid fa-circle-check" style="font-size:26px;opacity:.4"></i><br>Nenhuma tarefa pendente. Bom trabalho!</div>`}
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:18px">
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-dragon"></i> Minha Pool</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="pools">Gerenciar</button>
+      </div>
+      ${pool.length ? `
+        <div class="champ-mini-list" style="gap:8px">
+          ${[...pool].sort((a,b)=>TIERS.indexOf(a.tier)-TIERS.indexOf(b.tier)).slice(0, 12).map(c => `
+            <span class="champ-mini ${esc(c.tier.toLowerCase())}" style="font-size:12px;padding:5px 10px">
+              ${esc(c.champ)} <b style="opacity:.65">${esc(c.tier)}</b>
+            </span>
+          `).join('')}
+          ${pool.length > 12 ? `<span class="champ-mini more">+${pool.length - 12}</span>` : ''}
+        </div>
+      ` : `<div class="empty">Você ainda não adicionou campeões. <br><button class="btn sm primary" data-act="nav" data-view="pools" style="margin-top:10px"><i class="fa-solid fa-plus"></i> Adicionar agora</button></div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-flag"></i> Últimos Resultados do Time</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="scrims">Ver todos</button>
+      </div>
+      ${recentGames.length ? `<div style="display:flex;flex-direction:column;gap:8px">
+        ${recentGames.map(g => `
+          <div class="scrim-row" style="grid-template-columns:46px 1fr 60px auto">
+            <div class="res-badge res-${g.result}">${g.result}</div>
+            <div>
+              <div style="font-weight:600;font-size:13px">
+                ${g.kind === 'torneio' ? `<i class="fa-solid fa-trophy" style="color:#f7bd4a;font-size:11px"></i> ` : ''}vs ${esc(g.opponent)}
+              </div>
+              <div style="font-size:11px;color:var(--muted)">${fmtShort(g.date)} · ${esc(g.format || '')}</div>
+            </div>
+            <div style="font-weight:800;color:var(--gold2);text-align:right">${esc(g.score || '—')}</div>
+          </div>
+        `).join('')}
+      </div>` : `<div class="empty">Nenhuma partida registrada ainda.</div>`}
+    </div>
+  </div>
+
+  <div class="grid g-2">
+    <div class="card">
+      <div class="card-head">
+        <h3><i class="fa-solid fa-layer-group"></i> Composições do Time</h3>
+        <div class="spacer"></div>
+        <button class="btn sm" data-act="nav" data-view="comps">Ver todas</button>
+      </div>
+      ${(state.comps || []).length ? `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[...(state.comps || [])].slice(0, 3).map(c => {
+            const meta = c.status === 'aprovada' ? '#5ee08c' : c.status === 'recusada' ? '#ff9b9b' : '#f7bd4a';
+            return `<div class="home-comp-row">
+              <span style="color:${meta};font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(c.status)}</span>
+              <span style="flex:1;color:var(--silver);font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span>
+              <button class="icon-btn" data-act="view-comp" data-id="${c.id}" title="Ver"><i class="fa-solid fa-eye"></i></button>
+            </div>`;
+          }).join('')}
+        </div>` : `<div class="empty">Nenhuma composição ainda.</div>`}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3><i class="fa-solid fa-face-smile"></i> Como você está hoje?</h3></div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Marque seu humor para o coach acompanhar</div>
+      <div class="mood-row">
+        ${MOODS.map((m, i) => {
+          const sel = state.moods[TODAY]?.[pid] === i+1;
+          return `<button class="mood-btn ${sel ? 'selected' : ''}" data-act="set-mood" data-player="${pid}" data-mood="${i+1}">${m}</button>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}

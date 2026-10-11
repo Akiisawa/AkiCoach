@@ -6,7 +6,7 @@ import {
 import {
   viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
   viewScrims, viewTournaments, viewDraft, viewTasks, viewOpponents, viewNotes,
-  viewPlayerDetail, viewComps, bindDraft, bindDashboardCharts, toastIcon,
+  viewPlayerDetail, viewPlayerHome, viewComps, bindDraft, bindDashboardCharts, toastIcon,
   shiftCal, resetCal
 } from './ui.js';
 import {
@@ -20,6 +20,16 @@ import {
 } from './firebase.js';
 
 const $ = (s, r = document) => r.querySelector(s);
+
+const SEEN_PREFIX = 'aki_seen_';
+
+function getSeen(section) {
+  return parseInt(localStorage.getItem(SEEN_PREFIX + section) || '0', 10) || 0;
+}
+
+function markSeen(section, count) {
+  localStorage.setItem(SEEN_PREFIX + section, String(count || 0));
+}
 
 const VIEWS = [
   { id:'dash', icon:'fa-gauge-high', label:'Dashboard' },
@@ -37,6 +47,7 @@ const VIEWS = [
 ];
 
 const PLAYER_VIEWS = [
+  { id:'home', icon:'fa-house', label:'Início' },
   { id:'player', icon:'fa-chart-line', label:'Meu Painel' },
   { id:'agenda', icon:'fa-calendar-days', label:'Agenda' },
   { id:'pools', icon:'fa-dragon', label:'Pools do Time' },
@@ -51,6 +62,7 @@ const PLAYER_VIEWS = [
 ];
 
 const TITLES = {
+  home: ['Início', 'Visão geral para você'],
   dash: ['Dashboard', 'Visão geral do time'],
   agenda: ['Agenda', 'Scrims, partidas, revisões e treinos'],
   roster: ['Roster', 'Jogadores e comissão técnica'],
@@ -71,15 +83,27 @@ let playerModeActive = false;
 
 function renderNav() {
   const views = playerModeActive ? PLAYER_VIEWS : VIEWS;
-  const counts = playerModeActive ? {} : {
-    agenda: state.events.filter(e => e.date >= TODAY).length,
-    roster: state.players.length,
-    scrims: state.scrims.length,
-    tournaments: state.tournaments.length,
-    notes: state.notes.length,
-    tasks: state.tasks.filter(t => !t.done).length,
-    opponents: state.opponents.length
-  };
+
+  const counts = {};
+  const sections = [
+    ['agenda',        state.events.filter(e => e.date >= TODAY).length],
+    ['roster',        state.players.length],
+    ['scrims',        state.scrims.length],
+    ['tournaments',   state.tournaments.length],
+    ['notes',         state.notes.length],
+    ['tasks',         state.tasks.filter(t => !t.done).length],
+    ['opponents',     state.opponents.length],
+  ];
+
+  sections.forEach(([key, total]) => {
+    const seen = getSeen(key);
+    const newCount = Math.max(0, total - seen);
+    // Não mostra badge na view atual (já está vendo)
+    if (newCount > 0 && key !== currentView) {
+      counts[key] = newCount;
+    }
+  });
+
   $('#nav').innerHTML = views.map(v => `
     <button data-act="nav" data-view="${v.id}" class="${currentView===v.id?'active':''}">
       <i class="fa-solid ${v.icon}"></i>
@@ -94,6 +118,19 @@ function go(view) {
     if (!allowed) view = 'player';
   }
   currentView = view;
+
+  // Marca a seção como vista
+  const totals = {
+    agenda:      state.events.filter(e => e.date >= TODAY).length,
+    roster:      state.players.length,
+    scrims:      state.scrims.length,
+    tournaments: state.tournaments.length,
+    notes:       state.notes.length,
+    tasks:       state.tasks.filter(t => !t.done).length,
+    opponents:   state.opponents.length,
+  };
+  if (totals[view] !== undefined) markSeen(view, totals[view]);
+
   renderNav();
   const [t, s] = TITLES[view] || ['Aki Coach', ''];
   const allViews = playerModeActive ? PLAYER_VIEWS : VIEWS;
@@ -107,6 +144,7 @@ function go(view) {
 function renderView() {
   const v = $('#view');
   switch (currentView) {
+    case 'home': v.innerHTML = viewPlayerHome(); break;
     case 'dash': v.innerHTML = viewDash(); bindDashboardCharts(); break;
     case 'agenda': v.innerHTML = viewAgenda(); break;
     case 'roster': v.innerHTML = viewRoster(); break;
@@ -330,7 +368,7 @@ async function initPlayerApp(session) {
 
     playerModeActive = true;
     showPlayerApp(session);
-    go('player');
+    go('home');
     tickClock();
 
     listenTeam(session.teamUid, () => { renderView(); });
