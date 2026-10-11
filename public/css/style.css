@@ -1717,3 +1717,99 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   .player-welcome{flex-direction:column;text-align:center;gap:12px}
   .pw-hi{font-size:16px}
 }
+
+/* ═══ SCOUTING — ROSTER INIMIGO ═══ */
+.opp-roster{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:10px 0;
+  margin-top:8px;
+  border-top:1px solid var(--border-soft);
+  border-bottom:1px solid var(--border-soft);
+}
+
+.opp-roster-title{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#ff9b9b;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+.opp-roster-title i{font-size:10px;opacity:.8}
+
+.opp-role-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 8px;
+  border-radius:4px;
+  font-size:12px;
+  text-decoration:none;
+  transition:.15s;
+  border:1px solid transparent;
+  color:var(--silver-2);
+}
+.opp-role-row:hover{
+  background:rgba(74,158,255,.08);
+  border-color:rgba(74,158,255,.3);
+}
+.opp-role-row:hover .opp-role-nick{
+  color:var(--primary-light);
+}
+.opp-role-row:hover .opp-role-link-icon{
+  opacity:1;
+  transform:translateX(2px);
+}
+.opp-role-row.no-link{
+  cursor:default;
+}
+.opp-role-row.no-link:hover{
+  background:transparent;
+  border-color:transparent;
+}
+.opp-role-row.no-link:hover .opp-role-nick{
+  color:var(--silver-2);
+}
+
+.opp-role-label{
+  flex:0 0 40px;
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:.14em;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+
+.opp-role-nick{
+  flex:1;
+  min-width:0;
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  transition:.15s;
+}
+
+.opp-role-link-icon{
+  font-size:9px;
+  color:var(--primary-light);
+  opacity:.4;
+  transition:.15s;
+}
+
+.opp-notes{
+  font-size:11.5px;
+  color:var(--muted);
+  margin-top:8px;
+  font-style:italic;
+  line-height:1.5;
+  padding:8px 10px;
+  background:rgba(74,158,255,.03);
+  border-left:2px solid rgba(74,158,255,.3);
+  border-radius:4px;
+}

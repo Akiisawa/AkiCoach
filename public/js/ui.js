@@ -54,6 +54,13 @@ function isPlayerMode() {
   return document.body.classList.contains('player-mode');
 }
 
+function opggUrl(riotId) {
+  if (!riotId || !riotId.includes('#')) return '';
+  const [name, tag] = riotId.split('#').map(s => s.trim());
+  if (!name || !tag) return '';
+  return `https://www.op.gg/summoners/br/${encodeURIComponent(name)}-${encodeURIComponent(tag)}`;
+}
+
 function linkify(text) {
   const escaped = esc(text);
   return escaped.replace(
@@ -905,15 +912,32 @@ export function viewTasks() {
 
 export function viewOpponents() {
   const playerMode = isPlayerMode();
+
+  const roleLine = (label, nick) => {
+    if (!nick) return '';
+    const url = opggUrl(nick);
+    const inner = `
+      <span class="opp-role-label">${label}</span>
+      <span class="opp-role-nick">${esc(nick)}</span>
+      ${url ? `<i class="fa-solid fa-arrow-up-right-from-square opp-role-link-icon"></i>` : ''}
+    `;
+    return url
+      ? `<a class="opp-role-row" href="${url}" target="_blank" rel="noopener noreferrer" title="Abrir ${esc(nick)} no OP.GG">${inner}</a>`
+      : `<div class="opp-role-row no-link">${inner}</div>`;
+  };
+
   return `
   ${!playerMode ? `<div style="display:flex;gap:10px;margin-bottom:16px">
     <button class="btn primary" data-act="new-opponent"><i class="fa-solid fa-plus"></i> Adicionar Oponente</button>
   </div>` : ''}
   ${state.opponents.length ? `<div class="grid g-auto">
-    ${state.opponents.map(o => `
+    ${state.opponents.map(o => {
+      const roster = o.roster || {};
+      const hasRoster = Object.values(roster).some(Boolean);
+      return `
       <div class="opp-card">
         <div style="display:flex;align-items:flex-start;gap:8px">
-          <div style="flex:1">
+          <div style="flex:1;min-width:0">
             <div class="opp-name">${esc(o.name)}</div>
             <div class="opp-tag">${esc(o.tag||'')}</div>
           </div>
@@ -921,15 +945,31 @@ export function viewOpponents() {
             <button class="icon-btn" data-act="edit-opponent" data-id="${o.id}"><i class="fa-solid fa-pen"></i></button>
             <button class="icon-btn" data-act="del-opponent" data-id="${o.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
+
         ${o.playstyle?`<div class="opp-stat"><i class="fa-solid fa-gamepad"></i> ${esc(o.playstyle)}</div>`:''}
         ${o.weakness?`<div class="opp-stat" style="color:#f7bd4a"><i class="fa-solid fa-triangle-exclamation"></i> ${esc(o.weakness)}</div>`:''}
         ${o.bans?`<div class="opp-stat"><i class="fa-solid fa-ban"></i> Bans: ${esc(o.bans)}</div>`:''}
         ${o.picks?`<div class="opp-stat"><i class="fa-solid fa-star"></i> Picks: ${esc(o.picks)}</div>`:''}
-        ${o.notes?`<div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic">${esc(o.notes)}</div>`:''}
-        <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+
+        ${hasRoster ? `
+          <div class="opp-roster">
+            <div class="opp-roster-title">
+              <i class="fa-solid fa-users-viewfinder"></i> Roster
+            </div>
+            ${roleLine('TOP', roster.TOP)}
+            ${roleLine('JNG', roster.JNG)}
+            ${roleLine('MID', roster.MID)}
+            ${roleLine('ADC', roster.ADC)}
+            ${roleLine('SUP', roster.SUP)}
+          </div>` : ''}
+
+        ${o.notes?`<div class="opp-notes">${esc(o.notes)}</div>`:''}
+
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);padding-top:10px;border-top:1px solid var(--border-soft)">
           H2H: <b style="color:${o.wins>o.losses?'#5ee08c':o.wins<o.losses?'#ff9b9b':'var(--muted)'}">${o.wins||0}V — ${o.losses||0}D</b>
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
   </div>` : `<div class="empty"><i class="fa-solid fa-chess" style="font-size:26px;opacity:.4"></i><br>Nenhum oponente mapeado.</div>`}`;
 }
 

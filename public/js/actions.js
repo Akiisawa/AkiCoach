@@ -530,32 +530,69 @@ export function modalTask(id) {
 
 export function modalOpponent(id) {
   const o = id ? state.opponents.find(x => x.id === id) : null;
+  const r = o?.roster || {};
+
   const body = `
     <div class="row-2">
       ${field('Nome do time', `<input name="name" required maxlength="40" value="${esc(o?.name || '')}">`)}
       ${field('Tag', `<input name="tag" maxlength="6" value="${esc(o?.tag || '')}">`)}
     </div>
     <div class="row-2">
-      ${field('Estilo de jogo', `<input name="playstyle" value="${esc(o?.playstyle || '')}">`)}
-      ${field('Ponto fraco', `<input name="weakness" value="${esc(o?.weakness || '')}">`)}
+      ${field('Estilo de jogo', `<input name="playstyle" value="${esc(o?.playstyle || '')}" placeholder="Ex: agressivo early">`)}
+      ${field('Ponto fraco', `<input name="weakness" value="${esc(o?.weakness || '')}" placeholder="Ex: mid game fraco">`)}
     </div>
     <div class="row-2">
-      ${field('Bans recorrentes', `<input name="bans" value="${esc(o?.bans || '')}">`)}
-      ${field('Picks favoritos', `<input name="picks" value="${esc(o?.picks || '')}">`)}
+      ${field('Bans recorrentes', `<input name="bans" value="${esc(o?.bans || '')}" placeholder="Ex: Azir, Vi, Rakan">`)}
+      ${field('Picks favoritos', `<input name="picks" value="${esc(o?.picks || '')}" placeholder="Ex: Kai'Sa, Nautilus">`)}
     </div>
     <div class="row-2">
       ${field('Vitórias H2H', `<input type="number" name="wins" min="0" value="${esc(o?.wins ?? 0)}">`)}
       ${field('Derrotas H2H', `<input type="number" name="losses" min="0" value="${esc(o?.losses ?? 0)}">`)}
     </div>
-    ${field('Notas de scouting', `<textarea name="notes">${esc(o?.notes || '')}</textarea>`)}`;
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px;padding-top:12px;border-top:1px solid var(--border-soft)">
+      <i class="fa-solid fa-users-viewfinder" style="color:#ff9b9b;font-size:12px"></i>
+      <span style="font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff9b9b">Roster Inimigo (Nick#TAG)</span>
+    </div>
+    <div class="row-3">
+      ${field('Top', `<input name="rTOP" value="${esc(r.TOP || '')}" placeholder="Nick#BR1">`)}
+      ${field('Jungle', `<input name="rJNG" value="${esc(r.JNG || '')}" placeholder="Nick#BR1">`)}
+      ${field('Mid', `<input name="rMID" value="${esc(r.MID || '')}" placeholder="Nick#BR1">`)}
+    </div>
+    <div class="row-2">
+      ${field('ADC', `<input name="rADC" value="${esc(r.ADC || '')}" placeholder="Nick#BR1">`)}
+      ${field('Suporte', `<input name="rSUP" value="${esc(r.SUP || '')}" placeholder="Nick#BR1">`)}
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-6px">
+      <i class="fa-solid fa-circle-info"></i> Use o formato completo (Nick#TAG). O sistema vai gerar um link pro OP.GG de cada jogador.
+    </div>
+
+    ${field('Notas de scouting', `<textarea name="notes" placeholder="Padrões, timing de rotações, comportamento...">${esc(o?.notes || '')}</textarea>`)}`;
+
   openModal({
-    title: o ? 'Editar Oponente' : 'Adicionar Oponente', icon: 'fa-chess', body, wide: true,
+    title: o ? 'Editar Oponente' : 'Adicionar Oponente',
+    icon: 'fa-chess',
+    body,
+    wide: true,
     onSubmit: d => {
       if (!d.name.trim()) return false;
       const payload = {
-        name: d.name.trim(), tag: d.tag.trim(), playstyle: d.playstyle.trim(),
-        weakness: d.weakness.trim(), bans: d.bans.trim(), picks: d.picks.trim(),
-        wins: +d.wins || 0, losses: +d.losses || 0, notes: d.notes.trim()
+        name: d.name.trim(),
+        tag: d.tag.trim(),
+        playstyle: d.playstyle.trim(),
+        weakness: d.weakness.trim(),
+        bans: d.bans.trim(),
+        picks: d.picks.trim(),
+        wins: +d.wins || 0,
+        losses: +d.losses || 0,
+        notes: d.notes.trim(),
+        roster: {
+          TOP: (d.rTOP || '').trim(),
+          JNG: (d.rJNG || '').trim(),
+          MID: (d.rMID || '').trim(),
+          ADC: (d.rADC || '').trim(),
+          SUP: (d.rSUP || '').trim(),
+        },
       };
       if (o) Object.assign(o, payload);
       else state.opponents.push({ id: uid(), ...payload });
