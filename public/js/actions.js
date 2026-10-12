@@ -132,25 +132,32 @@ export function modalPlayer(id) {
       ${field('Função na staff', `<select name="staffRole">${staffRoleOptions(isStaff ? (p?.role || 'HEAD_COACH') : 'HEAD_COACH')}</select>`)}
     </div>
 
-    <div class="field">
-      <label>PIN de acesso ${hasPin ? '(ativo)' : ''}</label>
-      <div style="display:flex;gap:6px">
-        <input name="pin" id="pin-input" maxlength="8" inputmode="numeric"
-               placeholder="${hasPin ? 'Deixe vazio para manter' : 'Ex: 123456'}"
-               value="" autocomplete="off" style="flex:1">
-        <button type="button" class="btn" id="pin-generate" title="Gerar PIN">
-          <i class="fa-solid fa-dice"></i>
-        </button>
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:180px">
+        <label>PIN de acesso ${hasPin ? '(ativo)' : ''}</label>
+        <div style="display:flex;gap:6px">
+          <input name="pin" id="pin-input" maxlength="8" inputmode="numeric"
+                 placeholder="${hasPin ? 'Deixe vazio para manter' : 'Ex: 123456'}"
+                 value="" autocomplete="off" style="flex:1">
+          <button type="button" class="btn" id="pin-generate" title="Gerar PIN">
+            <i class="fa-solid fa-dice"></i>
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:6px;line-height:1.45">
+          <i class="fa-solid fa-key" style="color:var(--primary);font-size:10px;margin-top:3px;flex:0 0 auto"></i>
+          <span>Login com nick + PIN. Vale para jogadores e staff.</span>
+        </div>
       </div>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:8px;line-height:1.5">
-      </div>
-    </div>
 
-    <div id="id-staff-section" style="display:${isStaff ? 'block' : 'none'}">
-      ${field('Discord', `
-        <input name="discord" maxlength="60" value="${esc(p?.discord || '')}" placeholder="Ex: akisawa ou akisawa#1234">
-      `)}
-      <div style="font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:8px;line-height:1.5">
+      <div id="id-staff-section" style="flex:1;min-width:180px;display:${isStaff ? 'block' : 'none'}">
+        <div class="field">
+          <label>Discord</label>
+          <input name="discord" maxlength="60" value="${esc(p?.discord || '')}" placeholder="Ex: akisawa ou akisawa#1234">
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:6px;line-height:1.45">
+            <i class="fa-brands fa-discord" style="color:#7289da;font-size:11px;margin-top:2px;flex:0 0 auto"></i>
+            <span>Só para contato. Staff não precisa de conta Riot.</span>
+          </div>
+        </div>
       </div>
     </div>`;
 
