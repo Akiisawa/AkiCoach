@@ -1,13 +1,13 @@
 {
   "champions": {
     "Aatrox": {
-      "strong": ["Ornn", "Gnar", "Illaoi"],
-      "weak": ["Fiora", "Jax", "Irelia"],
+      "strong": ["Ornn", "K'Sante", "Illaoi"],
+      "weak": ["Fiora", "Rumble", "Irelia"],
       "confidence": "high"
     },
     "Ahri": {
       "strong": ["Lux", "Twisted Fate", "Syndra"],
-      "weak": ["Sylas", "Yone", "Fizz"],
+      "weak": ["Zoe", "Qyiana", "Fizz"],
       "confidence": "high"
     },
     "Akali": {

@@ -7,7 +7,8 @@ import {
 import {
   viewDash, viewAgenda, viewRoster, viewPools, viewMatrix,
   viewScrims, viewTournaments, viewDraft, viewTasks, viewOpponents, viewNotes,
-  viewPlayerDetail, viewPlayerHome, viewComps, bindDraft, bindDashboardCharts, toastIcon,
+  viewPlayerDetail, viewPlayerHome, viewComps, viewCounters,
+  bindDraft, bindDashboardCharts, toastIcon,
   shiftCal, resetCal
 } from './ui.js';
 import {
@@ -41,6 +42,7 @@ const VIEWS = [
   { id:'scrims', icon:'fa-flag', label:'Scrims' },
   { id:'tournaments', icon:'fa-trophy', label:'Campeonatos' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
+  { id:'counters', icon:'fa-scale-balanced', label:'Counters' },
   { id:'comps', icon:'fa-layer-group', label:'Composições' },
   { id:'tasks', icon:'fa-list-check', label:'Tarefas' },
   { id:'opponents', icon:'fa-binoculars', label:'Scouting' },
@@ -57,6 +59,7 @@ const PLAYER_VIEWS = [
   { id:'tournaments', icon:'fa-trophy', label:'Campeonatos' },
   { id:'tasks', icon:'fa-list-check', label:'Minhas Tarefas' },
   { id:'draft', icon:'fa-chess', label:'Draft Board' },
+  { id:'counters', icon:'fa-scale-balanced', label:'Counters' },
   { id:'comps', icon:'fa-layer-group', label:'Composições' },
   { id:'opponents', icon:'fa-binoculars', label:'Scouting' },
   { id:'notes', icon:'fa-pen', label:'Anotações' }
@@ -72,6 +75,7 @@ const TITLES = {
   scrims: ['Scrims', 'Histórico e resultados de treinos'],
   tournaments: ['Campeonatos', 'Partidas oficiais e torneios'],
   draft: ['Draft Board', 'Simulador de picks e bans'],
+  counters: ['Counters', 'Counters por campeão (manual)'],
   comps: ['Composições', 'Comps do time para testar e aprovar'],
   tasks: ['Tarefas', 'Homework e metas individuais'],
   opponents: ['Scouting', 'Análise de oponentes'],
@@ -156,6 +160,7 @@ function renderView() {
     case 'scrims': v.innerHTML = viewScrims(); break;
     case 'tournaments': v.innerHTML = viewTournaments(); break;
     case 'draft': v.innerHTML = viewDraft(); bindDraft(); break;
+    case 'counters': v.innerHTML = viewCounters(); break;
     case 'comps': v.innerHTML = viewComps(); break;
     case 'tasks': v.innerHTML = viewTasks(); break;
     case 'opponents': v.innerHTML = viewOpponents(); break;
@@ -395,6 +400,20 @@ async function initApp(user) {
   }
 
   listenTeam(user.uid, () => { renderNav(); renderView(); });
+  if (!state.countersSeeded) {
+    try {
+      const res = await fetch('data/counters.json');
+      if (res.ok) {
+        const data = await res.json();
+        state.counters = data.champions || {};
+        state.countersSeeded = true;
+        await saveToFirebase();
+        console.log('✅ Counters migrados do JSON pro Firebase');
+      }
+    } catch (e) {
+      console.warn('Sem counters.json pra migrar:', e.message);
+    }
+  }
   initDraftDragDrop();
   $('#user-name').textContent = state.coachName;
 
@@ -569,4 +588,22 @@ document.addEventListener('click', e => {
   if (typeof renderView === 'function') renderView();
   const inp = document.getElementById('matrix-search-input');
   if (inp) inp.focus();
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'counters-search-input') {
+    const val = e.target.value;
+    window.__akiCountersSearch = val;
+    clearTimeout(window.__akiCountersDebounce);
+    window.__akiCountersDebounce = setTimeout(() => {
+      if (currentView === 'counters') {
+        renderView();
+        const inp = document.getElementById('counters-search-input');
+        if (inp) {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }
+      }
+    }, 180);
+  }
 });

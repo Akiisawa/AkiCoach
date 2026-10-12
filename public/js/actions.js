@@ -2,7 +2,7 @@ import {
   state, ROLES, STAFF_ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
   hashPin, generatePin, CHAMPS
 } from './state.js';
-import { toast, toastIcon } from './ui.js';
+import { toast, toastIcon, championIconUrl } from './ui.js';
 import {
   getAccountByRiotId, getSummonerByPuuid, getRankedStats,
   getChampionMastery, fetchPlayerStats, setCachedStats, champIconName
@@ -768,6 +768,7 @@ export function bindActions() {
       'new-scrim', 'edit-scrim', 'del-scrim',
       'new-tournament', 'edit-tournament', 'del-tournament',
       'save-draft', 'clear-draft', 'load-draft', 'del-draft',
+      'edit-counter', 'counters-filter', 'counters-clear-search', 'reseed-counters',
       'toggle-fearless', 'set-fearless-series', 'fearless-next-game', 'fearless-reset',
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',
@@ -781,6 +782,7 @@ export function bindActions() {
       'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
       'new-scrim', 'edit-scrim', 'del-scrim',
       'new-tournament', 'edit-tournament', 'del-tournament',
+      'edit-counter', 'counters-filter', 'counters-clear-search', 'reseed-counters',
       'draft-pick', 'draft-clear', 'draft-timer-start', 'draft-timer-reset',
       'toggle-fearless', 'set-fearless-series', 'fearless-next-game', 'fearless-reset',
       'draft-suggest-fill',
@@ -796,7 +798,6 @@ export function bindActions() {
         return;
       }
 
-      // Jogador comum (não staff) tem restrições de ownership
       if (!staff) {
         if (['new-champ', 'edit-champ', 'del-champ'].includes(act)) {
           const pid = t.dataset.pid;
@@ -902,19 +903,42 @@ export function bindActions() {
         if (!filled) toastIcon('Nenhum slot livre', 'fa-triangle-exclamation');
         break;
       }
+            case 'edit-counter': modalEditCounter(t.dataset.champ); break;
+      case 'counters-filter': {
+        window.__akiCountersFilter = t.dataset.filter;
+        render();
+        break;
+      }
+      case 'counters-clear-search': {
+        window.__akiCountersSearch = '';
+        render();
+        break;
+      }
+      case 'reseed-counters': {
+        modalConfirm(
+          'Importar counters do JSON',
+          'Isso lê o arquivo public/data/counters.json e sobrescreve os counters salvos no Firebase. Continuar?',
+          async () => {
+            try {
+              const res = await fetch('data/counters.json');
+              if (!res.ok) throw new Error('Arquivo não encontrado');
+              const data = await res.json();
+              state.counters = data.champions || {};
+              state.countersSeeded = true;
+              save();
+              render();
+              toastIcon('Counters importados', 'fa-file-import');
+            } catch (e) {
+              toastIcon('Erro ao importar: ' + e.message, 'fa-circle-xmark');
+            }
+          }
+        );
+        break;
+      }
       case 'toggle-fearless': {
         if (!state.fearless) state.fearless = { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
         state.fearless.enabled = !state.fearless.enabled;
         toastIcon(state.fearless.enabled ? '🔥 Fearless Draft ativado' : 'Fearless Draft desativado', state.fearless.enabled ? 'fa-fire' : 'fa-circle-info');
-        save(); render();
-        break;
-      }
-      case 'set-fearless-series': {
-        const val = +t.value;
-        if (!state.fearless) break;
-        state.fearless.totalGames = val;
-        // Se reduzir pra menos que o jogo atual, volta
-        if (state.fearless.currentGame > val) state.fearless.currentGame = val;
         save(); render();
         break;
       }
@@ -1015,6 +1039,20 @@ export function bindActions() {
     }
   });
 }
+
+/* Listener separado para <select> (change não dispara click) */
+document.addEventListener('change', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  if (t.dataset.act === 'set-fearless-series') {
+    const val = +t.value;
+    if (!state.fearless) return;
+    state.fearless.totalGames = val;
+    if (state.fearless.currentGame > val) state.fearless.currentGame = val;
+    save(); render();
+    toastIcon(`Série alterada para MD${val}`, 'fa-fire');
+  }
+});
 
 function exportData() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -1524,4 +1562,218 @@ export function fearlessNextGame() {
 
   save(); render();
   toastIcon(`Jogo ${state.fearless.currentGame} — ${newLocked.length} campeões bloqueados`, 'fa-forward');
+}
+
+/* ═══════════════════════════════════════
+   MODAL: Editar Counters de um campeão
+   ═══════════════════════════════════════ */
+export function modalEditCounter(champName) {
+  if (!champName) return;
+  if (!state.counters) state.counters = {};
+
+  const current = state.counters[champName] || { strong: [], weak: [], confidence: 'medium' };
+  const strong = Array.isArray(current.strong) ? [...current.strong] : [];
+  const weak = Array.isArray(current.weak) ? [...current.weak] : [];
+  let confidence = current.confidence || 'medium';
+
+  const MAX_PER_SIDE = 6;
+
+  const champChips = (arr, kind) => arr.length
+    ? arr.map((c, i) => `
+        <span class="counter-edit-chip ${kind}" data-idx="${i}">
+          ${esc(c)}
+          <button type="button" class="counter-chip-remove" data-remove="${kind}" data-idx="${i}" title="Remover">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </span>`).join('')
+    : `<span class="counter-empty-hint">Nenhum adicionado ainda</span>`;
+
+  const confOptions = [
+    ['high', 'Alta', '#5ee08c'],
+    ['medium', 'Média', '#f7bd4a'],
+    ['low', 'Baixa', '#ff9b9b'],
+  ];
+
+  const body = `
+    <div class="counter-edit-header">
+      <img src="${championIconUrl(champName)}" alt="" onerror="this.style.display='none'">
+      <div>
+        <div class="counter-edit-champ">${esc(champName)}</div>
+        <div class="counter-edit-sub">Configure os counters manuais</div>
+      </div>
+    </div>
+
+    <div class="counter-edit-section">
+      <div class="counter-edit-section-head">
+        <div class="counter-edit-section-label strong">
+          <i class="fa-solid fa-arrow-up"></i> Forte contra
+        </div>
+        <div class="counter-edit-count">${strong.length}/${MAX_PER_SIDE}</div>
+      </div>
+      <div class="counter-edit-chips" id="counter-strong-chips">
+        ${champChips(strong, 'strong')}
+      </div>
+      ${strong.length < MAX_PER_SIDE ? `
+        <div class="counter-edit-add">
+          <input list="champ-list" id="counter-strong-input" placeholder="Adicionar campeão..." autocomplete="off" maxlength="20">
+          <button type="button" class="btn sm primary" id="counter-strong-add"><i class="fa-solid fa-plus"></i> Adicionar</button>
+        </div>
+      ` : ''}
+    </div>
+
+    <div class="counter-edit-section">
+      <div class="counter-edit-section-head">
+        <div class="counter-edit-section-label weak">
+          <i class="fa-solid fa-arrow-down"></i> Fraco contra
+        </div>
+        <div class="counter-edit-count">${weak.length}/${MAX_PER_SIDE}</div>
+      </div>
+      <div class="counter-edit-chips" id="counter-weak-chips">
+        ${champChips(weak, 'weak')}
+      </div>
+      ${weak.length < MAX_PER_SIDE ? `
+        <div class="counter-edit-add">
+          <input list="champ-list" id="counter-weak-input" placeholder="Adicionar campeão..." autocomplete="off" maxlength="20">
+          <button type="button" class="btn sm primary" id="counter-weak-add"><i class="fa-solid fa-plus"></i> Adicionar</button>
+        </div>
+      ` : ''}
+    </div>
+
+    <div class="counter-edit-section">
+      <div class="counter-edit-section-label">
+        <i class="fa-solid fa-signal"></i> Confiança do dado
+      </div>
+      <div class="counter-conf-picker">
+        ${confOptions.map(([k, l, c]) => `
+          <button type="button" class="counter-conf-btn ${confidence === k ? 'active' : ''}" data-conf="${k}" style="--conf-color:${c}">
+            <span class="counter-conf-dot" style="background:${c}"></span> ${l}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  openModal({
+    title: `Counters — ${champName}`,
+    icon: 'fa-scale-balanced',
+    body,
+    wide: true,
+    submitLabel: 'Salvar Counters',
+    onSubmit: () => {
+      const cleanStrong = [...new Set(strong.map(s => s.trim()).filter(Boolean))];
+      const cleanWeak = [...new Set(weak.map(s => s.trim()).filter(Boolean))];
+
+      if (!cleanStrong.length && !cleanWeak.length && confidence === 'medium') {
+        // Nada útil — pergunta se quer remover
+        delete state.counters[champName];
+      } else {
+        state.counters[champName] = {
+          strong: cleanStrong,
+          weak: cleanWeak,
+          confidence,
+        };
+      }
+      save(); render();
+      toastIcon(`${champName} atualizado`, 'fa-circle-check');
+    },
+    onMount: () => {
+      const root = $('#modal-root');
+
+      // Remove chip
+      root.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-remove]');
+        if (!btn) return;
+        const kind = btn.dataset.remove;
+        const idx = +btn.dataset.idx;
+        if (kind === 'strong' && strong[idx] !== undefined) {
+          strong.splice(idx, 1);
+          modalEditCounter(champName);
+          // Reabre com estado atualizado
+          setTimeout(() => {
+            if (state.counters[champName]) {
+              state.counters[champName].strong = strong;
+              state.counters[champName].weak = weak;
+              state.counters[champName].confidence = confidence;
+            } else {
+              state.counters[champName] = { strong, weak, confidence };
+            }
+            modalEditCounter(champName);
+          }, 0);
+        } else if (kind === 'weak' && weak[idx] !== undefined) {
+          weak.splice(idx, 1);
+          modalEditCounter(champName);
+          setTimeout(() => {
+            if (state.counters[champName]) {
+              state.counters[champName].strong = strong;
+              state.counters[champName].weak = weak;
+              state.counters[champName].confidence = confidence;
+            } else {
+              state.counters[champName] = { strong, weak, confidence };
+            }
+            modalEditCounter(champName);
+          }, 0);
+        }
+      });
+
+      // Add strong
+      const addStrong = (val) => {
+        const v = (val || '').trim();
+        if (!v) return;
+        if (strong.includes(v) || weak.includes(v)) {
+          toastIcon('Campeão já está na lista', 'fa-triangle-exclamation');
+          return;
+        }
+        if (strong.length >= MAX_PER_SIDE) {
+          toastIcon(`Máximo de ${MAX_PER_SIDE}`, 'fa-triangle-exclamation');
+          return;
+        }
+        strong.push(v);
+        // Reabre com dados atualizados
+        state.counters[champName] = { strong, weak, confidence };
+        modalEditCounter(champName);
+      };
+      const addWeak = (val) => {
+        const v = (val || '').trim();
+        if (!v) return;
+        if (strong.includes(v) || weak.includes(v)) {
+          toastIcon('Campeão já está na lista', 'fa-triangle-exclamation');
+          return;
+        }
+        if (weak.length >= MAX_PER_SIDE) {
+          toastIcon(`Máximo de ${MAX_PER_SIDE}`, 'fa-triangle-exclamation');
+          return;
+        }
+        weak.push(v);
+        state.counters[champName] = { strong, weak, confidence };
+        modalEditCounter(champName);
+      };
+
+      const sInput = document.getElementById('counter-strong-input');
+      const sBtn = document.getElementById('counter-strong-add');
+      if (sInput && sBtn) {
+        sBtn.addEventListener('click', () => addStrong(sInput.value));
+        sInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); addStrong(sInput.value); }
+        });
+      }
+
+      const wInput = document.getElementById('counter-weak-input');
+      const wBtn = document.getElementById('counter-weak-add');
+      if (wInput && wBtn) {
+        wBtn.addEventListener('click', () => addWeak(wInput.value));
+        wInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); addWeak(wInput.value); }
+        });
+      }
+
+      // Confidence picker
+      root.querySelectorAll('.counter-conf-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          confidence = b.dataset.conf;
+          state.counters[champName] = { strong, weak, confidence };
+          modalEditCounter(champName);
+        });
+      });
+    }
+  });
 }

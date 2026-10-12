@@ -6,24 +6,7 @@ import {
 } from './state.js';
 import { champIconName } from './riot-api.js';
 
-let _counters = null;
-let _countersPromise = null;
 
-async function loadCounters() {
-  if (_counters) return _counters;
-  if (_countersPromise) return _countersPromise;
-  _countersPromise = fetch('data/counters.json')
-    .then(r => r.ok ? r.json() : { champions: {} })
-    .then(d => { _counters = d.champions || {}; return _counters; })
-    .catch(() => { _counters = {}; return {}; });
-  return _countersPromise;
-}
-
-
-loadCounters().then(() => {
-
-  document.dispatchEvent(new CustomEvent('aki:rerender'));
-});
 const $ = (s, r = document) => r.querySelector(s);
 
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1';
@@ -943,8 +926,8 @@ export function viewDraft() {
   });
   const lastPick = allPicks[allPicks.length - 1];
   const countersFor = (champ) => {
-    if (!_counters || !champ) return null;
-    return _counters[champ] || null;
+    if (!champ || !state.counters) return null;
+    return state.counters[champ] || null;
   };
   const lastCounters = countersFor(lastPick?.champ);
 
@@ -1009,6 +992,11 @@ export function viewDraft() {
         <i class="fa-solid fa-scale-balanced"></i>
         <span>Counters — <b>${esc(lastPick.champ)}</b></span>
         <span class="draft-counters-side ${lastPick.side === 'blue' ? 'blue' : 'red'}">${lastPick.side === 'blue' ? 'Azul' : 'Vermelho'}</span>
+        ${canDraft ? `
+          <button class="btn sm" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:auto">
+            <i class="fa-solid fa-pen"></i> Editar
+          </button>
+        ` : ''}
       </div>
       ${lastCounters ? `
         <div class="draft-counters-grid">
@@ -1028,7 +1016,10 @@ export function viewDraft() {
       ` : `
         <div class="draft-counters-empty">
           <i class="fa-solid fa-circle-info"></i>
-          Sem dados de counter para <b>${esc(lastPick.champ)}</b>. Adicione em <code>public/data/counters.json</code>.
+          Sem dados de counter para <b>${esc(lastPick.champ)}</b>.
+          ${canDraft ? `<button class="btn sm primary" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:10px">
+            <i class="fa-solid fa-plus"></i> Adicionar agora
+          </button>` : ''}
         </div>
       `}
     </div>
@@ -1747,5 +1738,129 @@ export function viewPlayerHome() {
         }).join('')}
       </div>
     </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════
+   VIEW: COUNTERS
+   ═══════════════════════════════════════ */
+export function viewCounters() {
+  const canEdit = !isPlayerMode() || isStaffMode();
+  const filter = window.__akiCountersFilter || 'all';
+  const search = (window.__akiCountersSearch || '').toLowerCase().trim();
+
+  // Campeões que o time joga (aparecem nos pools)
+  const teamChamps = new Set();
+  state.players.filter(p => p.status !== 'staff').forEach(p => {
+    safePool(p).forEach(c => { if (c.champ) teamChamps.add(c.champ); });
+  });
+
+  // Lista base: todos os campeões que já têm dados + os do time
+  const withData = Object.keys(state.counters || {}).filter(k => {
+    const c = state.counters[k];
+    return c && ((c.strong && c.strong.length) || (c.weak && c.weak.length));
+  });
+
+  let champs = [];
+  if (filter === 'with') champs = withData.slice().sort();
+  else if (filter === 'team') champs = Array.from(teamChamps).sort();
+  else champs = CHAMPS.slice().sort();
+
+  if (search) champs = champs.filter(c => c.toLowerCase().includes(search));
+
+  const totalChamps = Object.keys(state.counters || {}).length;
+  const withStrong = Object.values(state.counters || {}).filter(c => c.strong?.length).length;
+  const withWeak = Object.values(state.counters || {}).filter(c => c.weak?.length).length;
+
+  const confMeta = {
+    high:   { label: 'Alta',  color: '#5ee08c' },
+    medium: { label: 'Média', color: '#f7bd4a' },
+    low:    { label: 'Baixa', color: '#ff9b9b' },
+  };
+
+  const champCard = (name) => {
+    const data = state.counters[name];
+    const hasData = data && ((data.strong?.length) || (data.weak?.length));
+    const conf = data?.confidence || (hasData ? 'medium' : 'low');
+    const meta = confMeta[conf];
+    const inTeam = teamChamps.has(name);
+
+    return `
+    <div class="counter-card ${hasData ? 'has-data' : 'empty'}" ${canEdit ? `data-act="edit-counter" data-champ="${esc(name)}"` : ''}>
+      <div class="counter-card-head">
+        <img src="${championIconUrl(name)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+        <div style="flex:1;min-width:0">
+          <div class="counter-card-name">${esc(name)}</div>
+          <div class="counter-card-meta">
+            <span class="counter-conf-dot" style="background:${meta.color}"></span>
+            <span style="color:${meta.color}">${meta.label}</span>
+            ${inTeam ? `<span class="counter-team-tag">Do time</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      ${hasData ? `
+        <div class="counter-card-body">
+          ${data.strong?.length ? `
+            <div class="counter-line">
+              <span class="counter-line-label strong"><i class="fa-solid fa-arrow-up"></i></span>
+              <div class="counter-line-chips">
+                ${data.strong.map(c => `<span class="counter-chip-tiny strong">${esc(c)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+          ${data.weak?.length ? `
+            <div class="counter-line">
+              <span class="counter-line-label weak"><i class="fa-solid fa-arrow-down"></i></span>
+              <div class="counter-line-chips">
+                ${data.weak.map(c => `<span class="counter-chip-tiny weak">${esc(c)}</span>`).join('')}
+              </div>
+            </div>` : ''}
+        </div>
+      ` : `
+        <div class="counter-card-empty">
+          <i class="fa-solid fa-plus"></i> Adicionar counters
+        </div>
+      `}
+    </div>`;
+  };
+
+  return `
+  <div class="counters-page">
+    <div class="counters-stats">
+      <div class="stat"><div class="lbl">Configurados</div><div class="val">${totalChamps}</div><div class="note">com dados salvos</div></div>
+      <div class="stat green"><div class="lbl">Com "Forte Contra"</div><div class="val">${withStrong}</div></div>
+      <div class="stat red"><div class="lbl">Com "Fraco Contra"</div><div class="val">${withWeak}</div></div>
+      <div class="stat blue"><div class="lbl">No Pool do Time</div><div class="val">${teamChamps.size}</div></div>
+    </div>
+
+    <div class="counters-toolbar">
+      <div class="counters-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="counters-search-input" placeholder="Buscar campeão..." value="${esc(window.__akiCountersSearch || '')}" autocomplete="off">
+        ${search ? `<button class="counters-search-clear" data-act="counters-clear-search" title="Limpar"><i class="fa-solid fa-xmark"></i></button>` : ''}
+      </div>
+      <div class="counters-tabs">
+        <button class="counters-tab ${filter === 'all' ? 'active' : ''}" data-act="counters-filter" data-filter="all">Todos</button>
+        <button class="counters-tab ${filter === 'with' ? 'active' : ''}" data-act="counters-filter" data-filter="with">Com dados</button>
+        <button class="counters-tab ${filter === 'team' ? 'active' : ''}" data-act="counters-filter" data-filter="team">Do time</button>
+      </div>
+      ${canEdit ? `
+        <div style="flex:1"></div>
+        <button class="btn" data-act="reseed-counters" title="Re-importar counters do arquivo counters.json">
+          <i class="fa-solid fa-file-import"></i> Importar do JSON
+        </button>
+      ` : ''}
+    </div>
+
+    ${champs.length ? `
+      <div class="counters-grid">
+        ${champs.map(champCard).join('')}
+      </div>
+    ` : `
+      <div class="empty">
+        <i class="fa-solid fa-magnifying-glass" style="font-size:26px;opacity:.4"></i><br>
+        Nenhum campeão encontrado
+      </div>
+    `}
   </div>`;
 }
