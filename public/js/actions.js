@@ -24,6 +24,13 @@ export function setCalHandlers(shift, reset) { calShiftFn = shift; calResetFn = 
 function render() { if (renderFn) renderFn(); }
 function save() { saveToFirebase().catch(e => console.warn('Save falhou:', e)); }
 function isPlayerMode() { return document.body.classList.contains('player-mode'); }
+function isStaffMode() {
+  return !!window.__akiStaffMode;
+}
+
+function canEditCalendar() {
+  return !isPlayerMode() || isStaffMode();
+}
 
 export function openModal({ title, body, submitLabel = 'Salvar', onSubmit, wide = false, danger = false, icon = 'fa-pen-to-square', onMount }) {
   const root = $('#modal-root');
@@ -760,26 +767,41 @@ export function bindActions() {
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',
       'new-opponent', 'edit-opponent', 'del-opponent',
-      'comp-approve', 'comp-reject', 'comp-test',   // ⬅ só coach muda status
+      'comp-approve', 'comp-reject', 'comp-test',
       'export', 'import', 'logout'
     ];
+
+    const staffAllowed = [
+      'new-event', 'edit-event', 'del-event',
+      'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
+      'new-scrim', 'edit-scrim', 'del-scrim',
+      'new-tournament', 'edit-tournament', 'del-tournament'
+    ];
+
     if (isPlayerMode()) {
-      if (coachOnly.includes(act)) {
+      const staff = !!window.__akiStaffMode;
+      const isAllowedForStaff = staff && staffAllowed.includes(act);
+
+      if (coachOnly.includes(act) && !isAllowedForStaff) {
         toastIcon('Ação restrita ao coach', 'fa-lock');
         return;
       }
-      if (['new-champ', 'edit-champ', 'del-champ'].includes(act)) {
-        const pid = t.dataset.pid;
-        if (!pid || pid !== window.__akiCurrentPlayer) {
-          toastIcon('Você só pode editar sua própria pool', 'fa-lock');
-          return;
+
+      // Jogador comum (não staff) tem restrições de ownership
+      if (!staff) {
+        if (['new-champ', 'edit-champ', 'del-champ'].includes(act)) {
+          const pid = t.dataset.pid;
+          if (!pid || pid !== window.__akiCurrentPlayer) {
+            toastIcon('Você só pode editar sua própria pool', 'fa-lock');
+            return;
+          }
         }
-      }
-      if (['edit-comp', 'del-comp'].includes(act)) {
-        const comp = (state.comps || []).find(x => x.id === id);
-        if (!comp || comp.authorId !== window.__akiCurrentPlayer) {
-          toastIcon('Você só pode editar suas composições', 'fa-lock');
-          return;
+        if (['edit-comp', 'del-comp'].includes(act)) {
+          const comp = (state.comps || []).find(x => x.id === id);
+          if (!comp || comp.authorId !== window.__akiCurrentPlayer) {
+            toastIcon('Você só pode editar suas composições', 'fa-lock');
+            return;
+          }
         }
       }
     }

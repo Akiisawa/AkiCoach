@@ -1891,12 +1891,3 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   color:#c9b8f0;
   margin-left:2px;
 }
-
-/* ═══ STAFF MODE — esconder ações que staff não pode fazer ═══ */
-body.staff-mode [data-act="new-player"],
-body.staff-mode [data-act="edit-player"],
-body.staff-mode [data-act="del-player"],
-body.staff-mode [data-act="edit-team"],
-body.staff-mode [data-act="link-riot"]{
-  display:none !important;
-}

@@ -56,6 +56,18 @@ function isPlayerMode() {
   return document.body.classList.contains('player-mode');
 }
 
+function isStaffMode() {
+  return !!window.__akiStaffMode;
+}
+
+function canEditCalendar() {
+  return !isPlayerMode() || isStaffMode();
+}
+
+function canEditRoster() {
+  return !isPlayerMode() || isStaffMode();
+}
+
 function opggUrl(riotId) {
   if (!riotId || !riotId.includes('#')) return '';
   const [name, tag] = riotId.split('#').map(s => s.trim());
@@ -431,7 +443,7 @@ export function evRowHTML(e) {
       <div class="title">${esc(e.title)}</div>
       <div class="meta">${t.label}${e.time&&e.time!=='00:00'?' · '+e.time:''}${e.duration?' · '+e.duration+'min':''}${e.opponent?' · vs '+esc(e.opponent):''}</div>
     </div>
-    ${!isPlayerMode() ? `
+    ${canEditCalendar() ? `
       <button class="icon-btn" data-act="edit-event" data-id="${e.id}"><i class="fa-solid fa-pen"></i></button>
       <button class="icon-btn" data-act="del-event" data-id="${e.id}"><i class="fa-solid fa-trash"></i></button>` : ''}
   </div>`;
@@ -480,18 +492,18 @@ export function viewAgenda() {
     <button class="btn sm" data-act="cal-next"><i class="fa-solid fa-chevron-right"></i></button>
     <button class="btn sm ghost" data-act="cal-today">Hoje</button>
     <div style="flex:1"></div>
-    ${!playerMode ? `<button class="btn primary" data-act="new-event" data-date="${TODAY}"><i class="fa-solid fa-plus"></i> Novo Evento</button>` : ''}
+    ${canEditCalendar() ? `<button class="btn primary" data-act="new-event" data-date="${TODAY}"><i class="fa-solid fa-plus"></i> Novo Evento</button>` : ''}
   </div>
   <div class="cal-grid" style="margin-bottom:8px">${WEEK.map(w => `<div class="cal-dow">${w}</div>`).join('')}</div>
   <div class="cal-grid">
     ${cells.map(c => {
       const evs = eventsOn(c.key);
       const isToday = c.key === TODAY;
-      return `<div class="cal-day ${c.out?'out':''} ${isToday?'today':''}" ${!playerMode ? `data-act="new-event" data-date="${c.key}"` : ''}>
+      return `<div class="cal-day ${c.out?'out':''} ${isToday?'today':''}" ${canEditCalendar() ? `data-act="new-event" data-date="${c.key}"` : ''}>
         <div class="cal-daynum"><span>${c.day}</span>${evs.length?`<span style="color:var(--gold)">${evs.length}</span>`:''}</div>
         ${evs.slice(0,3).map(e => {
           const t = EVENT_TYPES[e.type] || EVENT_TYPES.reuniao;
-          return `<div class="cal-ev" style="border-left-color:${t.color}" ${!playerMode ? `data-act="edit-event" data-id="${e.id}"` : ''} title="${esc(e.title)} — ${e.time}">
+          return `<div class="cal-ev" style="border-left-color:${t.color}" ${canEditCalendar() ? `data-act="edit-event" data-id="${e.id}"` : ''} title="${esc(e.title)} — ${e.time}">
             ${e.time !== '00:00' ? e.time + ' ' : ''}${esc(e.title)}</div>`;
         }).join('')}
         ${evs.length>3?`<div class="cal-more">+${evs.length-3} mais</div>`:''}
@@ -532,8 +544,10 @@ export function viewRoster() {
 
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-    <button class="btn primary" data-act="new-player"><i class="fa-solid fa-user-plus"></i> Adicionar Membro</button>
-    <button class="btn" data-act="edit-team"><i class="fa-solid fa-gear"></i> Editar Time</button>
+    ${canEditRoster() ? `
+      <button class="btn primary" data-act="new-player"><i class="fa-solid fa-user-plus"></i> Adicionar Membro</button>
+      <button class="btn" data-act="edit-team"><i class="fa-solid fa-gear"></i> Editar Time</button>
+    ` : ''}
     <div style="flex:1"></div>
     <div style="font-size:12px;color:var(--muted)">
       ${titulares} titulares · ${reservas} reservas · ${staffCount} staff
@@ -578,11 +592,12 @@ export function playerCardHTML(p) {
         <i class="fa-brands fa-discord"></i>
         <span>${safe.discord ? esc(safe.discord) : 'Sem Discord cadastrado'}</span>
       </div>
+      ${canEditRoster() ? `
       <div class="card-actions" style="margin-top:auto">
         <div style="flex:1"></div>
         <button class="btn sm" data-act="edit-player" data-id="${esc(safe.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button class="btn sm danger" data-act="del-player" data-id="${esc(safe.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-      </div>
+      </div>` : ''}
     </div>`;
   }
 
@@ -647,8 +662,9 @@ export function playerCardHTML(p) {
         <i class="fa-solid fa-chart-line"></i> Dashboard
       </button>
       <button class="btn sm" data-act="open-pool" data-id="${esc(safe.id)}" title="Pool"><i class="fa-solid fa-dragon"></i></button>
-      <button class="btn sm" data-act="edit-player" data-id="${esc(safe.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
-      <button class="btn sm danger" data-act="del-player" data-id="${esc(safe.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+      ${canEditRoster() ? `
+        <button class="btn sm" data-act="edit-player" data-id="${esc(safe.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn sm danger" data-act="del-player" data-id="${esc(safe.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>` : ''}
     </div>
   </div>`;
 }
