@@ -21,6 +21,23 @@ import {
   getPlayerIndex, signInAsPlayer
 } from './firebase.js';
 
+async function ensureCountersLoaded() {
+  // Se já tem contadores carregados ou já migrou, não faz nada
+  if (state.countersSeeded && Object.keys(state.counters || {}).length > 0) return;
+
+  try {
+    const res = await fetch('data/counters.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    state.counters = data.champions || {};
+    state.countersSeeded = true;
+    await saveToFirebase();
+    console.log('✅ Counters migrados do JSON pro Firebase');
+  } catch (e) {
+    console.warn('Sem counters.json pra migrar:', e.message);
+  }
+}
+
 const $ = (s, r = document) => r.querySelector(s);
 
 const SEEN_PREFIX = 'aki_seen_';
@@ -400,20 +417,7 @@ async function initApp(user) {
   }
 
   listenTeam(user.uid, () => { renderNav(); renderView(); });
-  if (!state.countersSeeded) {
-    try {
-      const res = await fetch('data/counters.json');
-      if (res.ok) {
-        const data = await res.json();
-        state.counters = data.champions || {};
-        state.countersSeeded = true;
-        await saveToFirebase();
-        console.log('✅ Counters migrados do JSON pro Firebase');
-      }
-    } catch (e) {
-      console.warn('Sem counters.json pra migrar:', e.message);
-    }
-  }
+  await ensureCountersLoaded();
   initDraftDragDrop();
   $('#user-name').textContent = state.coachName;
 
@@ -428,6 +432,8 @@ async function initPlayerApp(session) {
     state.teamUid = session.teamUid;
     const ok = await loadFromFirebase(session.teamUid);
     if (!ok) return false;
+
+    await ensureCountersLoaded();
 
     const p = state.players.find(x => x.id === session.playerId);
     if (!p) return false;
@@ -453,6 +459,8 @@ async function initStaffApp(session) {
     state.teamUid = session.teamUid;
     const ok = await loadFromFirebase(session.teamUid);
     if (!ok) return false;
+
+    await ensureCountersLoaded();
 
     const p = state.players.find(x => x.id === session.playerId);
     if (!p) return false;

@@ -768,7 +768,6 @@ export function bindActions() {
       'new-scrim', 'edit-scrim', 'del-scrim',
       'new-tournament', 'edit-tournament', 'del-tournament',
       'save-draft', 'clear-draft', 'load-draft', 'del-draft',
-      'edit-counter', 'counters-filter', 'counters-clear-search', 'reseed-counters',
       'toggle-fearless', 'set-fearless-series', 'fearless-next-game', 'fearless-reset',
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',

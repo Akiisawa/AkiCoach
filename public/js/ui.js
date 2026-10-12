@@ -992,11 +992,9 @@ export function viewDraft() {
         <i class="fa-solid fa-scale-balanced"></i>
         <span>Counters — <b>${esc(lastPick.champ)}</b></span>
         <span class="draft-counters-side ${lastPick.side === 'blue' ? 'blue' : 'red'}">${lastPick.side === 'blue' ? 'Azul' : 'Vermelho'}</span>
-        ${canDraft ? `
-          <button class="btn sm" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:auto">
-            <i class="fa-solid fa-pen"></i> Editar
-          </button>
-        ` : ''}
+        <button class="btn sm" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:auto">
+          <i class="fa-solid fa-pen"></i> Editar
+        </button>
       </div>
       ${lastCounters ? `
         <div class="draft-counters-grid">
@@ -1017,9 +1015,9 @@ export function viewDraft() {
         <div class="draft-counters-empty">
           <i class="fa-solid fa-circle-info"></i>
           Sem dados de counter para <b>${esc(lastPick.champ)}</b>.
-          ${canDraft ? `<button class="btn sm primary" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:10px">
+          <button class="btn sm primary" data-act="edit-counter" data-champ="${esc(lastPick.champ)}" style="margin-left:10px">
             <i class="fa-solid fa-plus"></i> Adicionar agora
-          </button>` : ''}
+          </button>
         </div>
       `}
     </div>
@@ -1745,7 +1743,7 @@ export function viewPlayerHome() {
    VIEW: COUNTERS
    ═══════════════════════════════════════ */
 export function viewCounters() {
-  const canEdit = !isPlayerMode() || isStaffMode();
+  const canEdit = true;
   const filter = window.__akiCountersFilter || 'all';
   const search = (window.__akiCountersSearch || '').toLowerCase().trim();
 
