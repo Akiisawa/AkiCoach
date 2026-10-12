@@ -1,6 +1,8 @@
 import {
-  state, ROLES, ROLE_ORDER, roleName, roleIcon, EVENT_TYPES, TIERS, PICK_TYPES, MOODS,
-  pad, fmtShort, WEEK, MONTHS, TODAY, dateKey, parseKey, esc
+  state, TODAY, WEEK, MONTHS, esc,
+  roleIcon, roleName,
+  ROLE_ORDER, STAFF_ORDER, TIERS, PICK_TYPES, EVENT_TYPES, MOODS,
+  fmtShort, dateKey, parseKey
 } from './state.js';
 import { champIconName } from './riot-api.js';
 
@@ -509,26 +511,36 @@ export function viewAgenda() {
   </div>`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: ROSTER
-   ═══════════════════════════════════════ */
 export function viewRoster() {
-  const order = { titular:0, reserva:1, staff:2, inativo:3 };
+  const statusOrder = { titular:0, reserva:1, staff:2, inativo:3 };
+
+  const roleSortIndex = (role) => {
+    if (role in ROLE_ORDER) return ROLE_ORDER[role];
+    if (role in STAFF_ORDER) return 100 + STAFF_ORDER[role];
+    return 999;
+  };
+
   const ps = [...state.players].sort((a,b) =>
-    (order[a.status]-order[b.status]) || (ROLE_ORDER[a.role]-ROLE_ORDER[b.role]) || a.nick.localeCompare(b.nick));
+    (statusOrder[a.status] - statusOrder[b.status])
+    || (roleSortIndex(a.role) - roleSortIndex(b.role))
+    || a.nick.localeCompare(b.nick)
+  );
+
+  const titulares = state.players.filter(p => p.status === 'titular').length;
+  const reservas = state.players.filter(p => p.status === 'reserva').length;
+  const staffCount = state.players.filter(p => p.status === 'staff').length;
 
   return `
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-    <button class="btn primary" data-act="new-player"><i class="fa-solid fa-user-plus"></i> Adicionar Jogador</button>
+    <button class="btn primary" data-act="new-player"><i class="fa-solid fa-user-plus"></i> Adicionar Membro</button>
     <button class="btn" data-act="edit-team"><i class="fa-solid fa-gear"></i> Editar Time</button>
     <div style="flex:1"></div>
     <div style="font-size:12px;color:var(--muted)">
-      ${state.players.filter(p=>p.status==='titular').length} titulares ·
-      ${state.players.filter(p=>p.status==='reserva').length} reservas
+      ${titulares} titulares · ${reservas} reservas · ${staffCount} staff
     </div>
   </div>
   ${ps.length ? `<div class="grid g-auto">${ps.map(playerCardHTML).join('')}</div>`
-    : `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Nenhum jogador cadastrado.</div>`}`;
+    : `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Nenhum membro cadastrado.</div>`}`;
 }
 
 export function playerCardHTML(p) {
@@ -540,17 +552,46 @@ export function playerCardHTML(p) {
     name: String(p.name || '').trim(),
     role: p.role || 'MID',
     status: p.status || 'titular',
+    discord: String(p.discord || '').trim(),
     pool: Array.isArray(p.pool) ? p.pool.filter(Boolean) : [],
     riot: (p.riot && typeof p.riot === 'object') ? p.riot : {},
   };
 
+  const isStaff = safe.status === 'staff';
   const initials = (safe.nick.slice(0, 2).toUpperCase().replace(/[^\w]/g, '')) || 'XX';
+
+  /* ══════════ STAFF CARD ══════════ */
+  if (isStaff) {
+    return `<div class="player-card staff-card">
+      <div class="role-tag"><i class="fa-solid ${roleIcon(safe.role)}"></i> ${esc(roleName(safe.role))}</div>
+      <div class="top">
+        <div class="avatar">
+          <span class="avatar-initials">${esc(initials)}</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="nick">${esc(safe.nick)}</div>
+          <div class="sub">${esc(safe.name || roleName(safe.role))}</div>
+          <div style="margin-top:6px"><span class="pill ${esc(safe.status)}">${esc(safe.status)}</span></div>
+        </div>
+      </div>
+      <div class="staff-discord ${safe.discord ? '' : 'empty'}">
+        <i class="fa-brands fa-discord"></i>
+        <span>${safe.discord ? esc(safe.discord) : 'Sem Discord cadastrado'}</span>
+      </div>
+      <div class="card-actions" style="margin-top:auto">
+        <div style="flex:1"></div>
+        <button class="btn sm" data-act="edit-player" data-id="${esc(safe.id)}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn sm danger" data-act="del-player" data-id="${esc(safe.id)}" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+  }
+
+  /* ══════════ PLAYER CARD ══════════ */
   const sorted = [...safe.pool].sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier));
   const hasRiot = safe.riot.gameName && safe.riot.puuid;
   const riotPartial = safe.riot.gameName && !safe.riot.puuid;
   const hasIcon = hasRiot && safe.riot.iconId;
 
-  /* ── Pool: mostra só 3 + "+N" ── */
   const MAX_CHAMPS = 3;
   const visibleChamps = sorted.slice(0, MAX_CHAMPS);
   const extra = sorted.length - MAX_CHAMPS;
@@ -566,7 +607,6 @@ export function playerCardHTML(p) {
         : '')
     : `<span class="champ-mini empty">Sem campeões</span>`;
 
-  /* ── Riot info em 2 rows ── */
   const riotInfoHTML = (hasRiot || riotPartial) ? `
     <div class="riot-info">
       <div class="riot-line-1" title="${esc(safe.riot.gameName)}#${esc(safe.riot.tagLine)}">
@@ -588,7 +628,7 @@ export function playerCardHTML(p) {
     <div class="top">
       <div class="avatar">
         <span class="avatar-initials">${esc(initials)}</span>
-        ${hasIcon ? `<img src="${profileIconUrl(safe.riot.iconId)}" alt="" onerror="this.remove()">` : ''}
+        ${hasIcon ? `<img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/${safe.riot.iconId}.jpg" alt="" onerror="this.remove()">` : ''}
       </div>
       <div style="flex:1;min-width:0">
         <div class="nick">${esc(safe.nick)}</div>
@@ -1003,6 +1043,16 @@ export function viewPlayerDetail() {
   const pid = window.__akiCurrentPlayer || null;
   const p = state.players.find(x => x.id === pid);
   if (!p) return `<div class="empty"><i class="fa-solid fa-user-slash" style="font-size:26px;opacity:.4"></i><br>Jogador não encontrado.</div>`;
+
+  if (p.status === 'staff') {
+    return `<div class="empty" style="padding:60px 20px">
+      <i class="fa-solid fa-user-tie" style="font-size:34px;opacity:.4"></i>
+      <div style="margin-top:12px">${esc(p.nick)} é membro da staff — sem dashboard de jogador.</div>
+      <div style="margin-top:16px">
+        <button class="btn ghost" data-act="nav" data-view="roster"><i class="fa-solid fa-arrow-left"></i> Voltar ao Roster</button>
+      </div>
+    </div>`;
+  }
 
   const riot = (p.riot && typeof p.riot === 'object') ? p.riot : {};
   const hasRiot = riot.gameName && riot.puuid;

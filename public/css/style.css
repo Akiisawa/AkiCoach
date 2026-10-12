@@ -1813,3 +1813,90 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   border-left:2px solid rgba(74,158,255,.3);
   border-radius:4px;
 }
+
+/* ═══ STAFF CARD ═══ */
+.staff-card{
+  background:linear-gradient(165deg,#141a2e,#080c1a);
+  border-color:rgba(168,85,247,.28);
+}
+.staff-card::before{
+  background:radial-gradient(circle at top right,rgba(168,85,247,.2),transparent 70%);
+}
+.staff-card .role-tag{
+  background:rgba(168,85,247,.15);
+  color:#c493f7;
+  border-color:rgba(168,85,247,.35);
+}
+.staff-card:hover{
+  border-color:rgba(168,85,247,.55);
+  box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 24px rgba(168,85,247,.18);
+}
+.staff-card .avatar{
+  border-color:rgba(168,85,247,.3);
+  background:linear-gradient(145deg,#1c1633,#0a0f1a);
+}
+.staff-card .avatar-initials{
+  color:#c9b8f0;
+}
+
+.staff-discord{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  background:rgba(88,101,242,.14);
+  border:1px solid rgba(88,101,242,.4);
+  border-radius:6px;
+  font-size:12.5px;
+  color:#b8c1ff;
+  font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.staff-discord i{
+  color:#7289da;
+  font-size:16px;
+  flex:0 0 auto;
+}
+.staff-discord.empty{
+  background:rgba(120,140,163,.06);
+  border-color:var(--border-soft);
+  color:var(--muted);
+  font-weight:400;
+  font-style:italic;
+}
+.staff-discord.empty i{
+  color:var(--muted);
+  opacity:.4;
+}
+
+/* ═══ STAFF TOPBAR ═══ */
+.staff-topbar{
+  background:rgba(168,85,247,.1);
+  border-color:rgba(168,85,247,.35);
+  color:#c493f7;
+}
+.staff-topbar i{color:#c493f7}
+
+.staff-role-badge{
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  padding:2px 8px;
+  border-radius:20px;
+  background:rgba(168,85,247,.18);
+  border:1px solid rgba(168,85,247,.4);
+  color:#c9b8f0;
+  margin-left:2px;
+}
+
+/* ═══ STAFF MODE — esconder ações que staff não pode fazer ═══ */
+body.staff-mode [data-act="new-player"],
+body.staff-mode [data-act="edit-player"],
+body.staff-mode [data-act="del-player"],
+body.staff-mode [data-act="edit-team"],
+body.staff-mode [data-act="link-riot"]{
+  display:none !important;
+}

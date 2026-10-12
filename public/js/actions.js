@@ -1,5 +1,5 @@
 import {
-  state, ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
+  state, ROLES, STAFF_ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
   hashPin, generatePin
 } from './state.js';
 import { toast, toastIcon } from './ui.js';
@@ -101,10 +101,39 @@ export function modalEvent(id, presetDate) {
 
 export function modalPlayer(id) {
   const p = id ? state.players.find(x => x.id === id) : null;
+  const isStaff = p?.status === 'staff';
   const hasPin = !!p?.pinHash;
-  const pinField = `
+
+  const roleOptions = (current) =>
+    ROLES.map(r => `<option value="${r.id}" ${current===r.id?'selected':''}>${r.name}</option>`).join('');
+
+  const staffRoleOptions = (current) =>
+    STAFF_ROLES.map(r => `<option value="${r.id}" ${current===r.id?'selected':''}>${r.name}</option>`).join('');
+
+  const body = `
+    <div class="row-2">
+      ${field('Nickname', `<input name="nick" required maxlength="20" value="${esc(p?.nick || '')}">`)}
+      ${field('Nome real', `<input name="name" maxlength="40" value="${esc(p?.name || '')}">`)}
+    </div>
+
+    ${field('Status', `
+      <select name="status" id="player-status-select">
+        ${['titular','reserva','staff','inativo'].map(s =>
+          `<option value="${s}" ${p?.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`
+        ).join('')}
+      </select>
+    `)}
+
+    <div id="role-player-section" style="display:${isStaff ? 'none' : 'block'}">
+      ${field('Posição', `<select name="role">${roleOptions(isStaff ? 'MID' : (p?.role || 'MID'))}</select>`)}
+    </div>
+
+    <div id="role-staff-section" style="display:${isStaff ? 'block' : 'none'}">
+      ${field('Função na staff', `<select name="staffRole">${staffRoleOptions(isStaff ? (p?.role || 'HEAD_COACH') : 'HEAD_COACH')}</select>`)}
+    </div>
+
     <div class="field">
-      <label>PIN do jogador ${hasPin ? '(ativo)' : ''}</label>
+      <label>PIN de acesso ${hasPin ? '(ativo)' : ''}</label>
       <div style="display:flex;gap:6px">
         <input name="pin" id="pin-input" maxlength="8" inputmode="numeric"
                placeholder="${hasPin ? 'Deixe vazio para manter' : 'Ex: 123456'}"
@@ -113,38 +142,37 @@ export function modalPlayer(id) {
           <i class="fa-solid fa-dice"></i>
         </button>
       </div>
-      ${hasPin ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">
-        <i class="fa-solid fa-info-circle"></i> Jogador já tem PIN. Deixe vazio para manter, ou digite um novo.
-      </div>` : `<div style="font-size:11px;color:var(--muted);margin-top:4px">
-        <i class="fa-solid fa-info-circle"></i> O jogador fará login com <b>nick + PIN</b>.
-      </div>`}
+      <div style="font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:8px;line-height:1.5">
+      </div>
+    </div>
+
+    <div id="id-staff-section" style="display:${isStaff ? 'block' : 'none'}">
+      ${field('Discord', `
+        <input name="discord" maxlength="60" value="${esc(p?.discord || '')}" placeholder="Ex: akisawa ou akisawa#1234">
+      `)}
+      <div style="font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:flex-start;gap:8px;line-height:1.5">
+      </div>
     </div>`;
-  const body = `
-    <div class="row-2">
-      ${field('Nickname', `<input name="nick" required maxlength="20" value="${esc(p?.nick || '')}">`)}
-      ${field('Nome real', `<input name="name" maxlength="40" value="${esc(p?.name || '')}">`)}
-    </div>
-    <div class="row-2">
-      ${field('Posição', `<select name="role">${ROLES.map(r => `<option value="${r.id}" ${p?.role===r.id?'selected':''}>${r.name}</option>`).join('')}</select>`)}
-      ${field('Status', `<select name="status">${['titular','reserva','staff','inativo'].map(s => `<option value="${s}" ${p?.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}</select>`)}
-    </div>
-    ${pinField}`;
 
   openModal({
-    title: p ? 'Editar Jogador' : 'Adicionar Jogador',
+    title: p ? 'Editar Membro' : 'Adicionar Membro',
     icon: 'fa-user-plus',
     body,
+    wide: true,
     onSubmit: async d => {
       if (!d.nick.trim()) return false;
       const newNick = d.nick.trim();
       const oldNick = p?.nick || '';
+      const isStaffNow = d.status === 'staff';
+      const finalRole = isStaffNow ? (d.staffRole || 'HEAD_COACH') : (d.role || 'MID');
 
       if (p) {
         Object.assign(p, {
           nick: newNick,
           name: d.name.trim(),
-          role: d.role,
-          status: d.status
+          role: finalRole,
+          status: d.status,
+          discord: isStaffNow ? (d.discord || '').trim() : (p.discord || ''),
         });
         if (!Array.isArray(p.pool)) p.pool = [];
         if (!p.riot || typeof p.riot !== 'object') {
@@ -152,13 +180,19 @@ export function modalPlayer(id) {
         }
       } else {
         state.players.push({
-          id: uid(), nick: newNick, name: d.name.trim(), role: d.role, status: d.status,
+          id: uid(),
+          nick: newNick,
+          name: d.name.trim(),
+          role: finalRole,
+          status: d.status,
+          discord: isStaffNow ? (d.discord || '').trim() : '',
           riot: { gameName:'', tagLine:'', puuid:'', platform:'BR1', rank:'', iconId:'' },
-          pool: []
+          pool: [],
         });
       }
       const target = p || state.players[state.players.length - 1];
 
+      // PIN: sempre opcional, para staff e jogador
       const pinValue = (d.pin || '').trim();
       if (pinValue) {
         if (!/^\d{4,8}$/.test(pinValue)) {
@@ -168,6 +202,12 @@ export function modalPlayer(id) {
         target.pinHash = await hashPin(newNick, pinValue);
       }
 
+      // Se virou staff, limpa pool (staff não tem pool)
+      if (isStaffNow) {
+        target.pool = [];
+      }
+
+      // Sincroniza o player_index
       if (oldNick && oldNick.toLowerCase() !== newNick.toLowerCase()) {
         await removePlayerIndex(oldNick);
       }
@@ -177,16 +217,31 @@ export function modalPlayer(id) {
           playerId: target.id,
           nick: newNick,
           pinHash: target.pinHash,
-          updatedAt: Date.now()
+          isStaff: isStaffNow,
+          updatedAt: Date.now(),
         });
       } else {
         await removePlayerIndex(newNick);
       }
 
       save(); render();
-      toastIcon(p ? 'Jogador atualizado' : 'Jogador adicionado');
+      toastIcon(p ? 'Membro atualizado' : 'Membro adicionado');
     },
     onMount: () => {
+      const statusSel = document.getElementById('player-status-select');
+      const rolePlayer = document.getElementById('role-player-section');
+      const roleStaff = document.getElementById('role-staff-section');
+      const idStaff = document.getElementById('id-staff-section');
+
+      const updateSections = () => {
+        const nowStaff = statusSel.value === 'staff';
+        rolePlayer.style.display = nowStaff ? 'none' : 'block';
+        roleStaff.style.display  = nowStaff ? 'block' : 'none';
+        idStaff.style.display    = nowStaff ? 'block' : 'none';
+      };
+
+      statusSel.addEventListener('change', updateSections);
+
       const gen = document.getElementById('pin-generate');
       const inp = document.getElementById('pin-input');
       if (gen && inp) {

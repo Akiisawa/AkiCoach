@@ -9,8 +9,27 @@ export const ROLES = [
 ];
 
 export const ROLE_ORDER = { TOP:0, JNG:1, MID:2, ADC:3, SUP:4 };
-export const roleName = r => (ROLES.find(x => x.id === r) || {}).name || r;
-export const roleIcon = r => (ROLES.find(x => x.id === r) || {}).icon || 'fa-circle';
+
+export const STAFF_ROLES = [
+  { id:'HEAD_COACH', name:'Head Coach', icon:'fa-user-tie' },
+  { id:'ANALYST',    name:'Analista',   icon:'fa-chart-line' },
+  { id:'MANAGER',    name:'Manager',    icon:'fa-briefcase' }
+];
+export const STAFF_ORDER = { HEAD_COACH:0, ANALYST:1, MANAGER:2 };
+
+export const roleName = r => {
+  const staff = STAFF_ROLES.find(x => x.id === r);
+  if (staff) return staff.name;
+  return (ROLES.find(x => x.id === r) || {}).name || r;
+};
+
+export const roleIcon = r => {
+  const staff = STAFF_ROLES.find(x => x.id === r);
+  if (staff) return staff.icon;
+  return (ROLES.find(x => x.id === r) || {}).icon || 'fa-circle';
+};
+
+export const isStaffRole = r => STAFF_ROLES.some(x => x.id === r);
 
 export const EVENT_TYPES = {
   scrim:   { label:'Scrim', color:'#3b82f6' },
@@ -127,6 +146,7 @@ export function normalizePlayer(p) {
     role: p.role || 'MID',
     status: p.status || 'titular',
     pinHash: p.pinHash || null,
+    discord: String(p.discord || '').trim(),
     pool: Array.isArray(p.pool) ? p.pool.filter(Boolean) : [],
     riot: (p.riot && typeof p.riot === 'object') ? p.riot : {
       gameName: '', tagLine: '', puuid: '', platform: 'BR1', rank: '', iconId: ''
