@@ -455,7 +455,8 @@ async function initStaffApp(session) {
 }
 
 onAuth(async user => {
-  if (user) {
+
+  if (user && !user.isAnonymous) {
     try { await initApp(user); }
     catch (e) {
       console.error(e);
