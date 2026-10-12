@@ -527,3 +527,38 @@ document.addEventListener('keydown', e => {
   const key = e.key.toLowerCase();
   if (map[key]) { go(map[key]); e.preventDefault(); }
 });
+
+// Busca na Matriz (input com debounce simples)
+document.addEventListener('input', e => {
+  if (e.target.id === 'matrix-search-input') {
+    const val = e.target.value;
+    window.__akiMatrixFilter = val;
+    clearTimeout(window.__akiMatrixDebounce);
+    window.__akiMatrixDebounce = setTimeout(() => {
+      const v = document.getElementById('view');
+      if (v && currentView === 'matrix') {
+        const { viewMatrix } = window.__akiUi || {};
+        // Re-renderiza apenas a view
+        if (typeof renderView === 'function') {
+          renderView();
+          // Recoloca o foco no input (perdeu ao re-renderizar)
+          const inp = document.getElementById('matrix-search-input');
+          if (inp) {
+            inp.focus();
+            inp.setSelectionRange(inp.value.length, inp.value.length);
+          }
+        }
+      }
+    }, 180);
+  }
+});
+
+// Limpar busca (X dentro do input)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act="matrix-clear-search"]');
+  if (!btn) return;
+  window.__akiMatrixFilter = '';
+  if (typeof renderView === 'function') renderView();
+  const inp = document.getElementById('matrix-search-input');
+  if (inp) inp.focus();
+});

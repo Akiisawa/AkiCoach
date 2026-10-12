@@ -678,9 +678,12 @@ export const setActivePlayerId = id => { activePlayerId = id; };
    ═══════════════════════════════════════ */
 export function viewPools() {
   if (!state.players.length) return `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Cadastre jogadores primeiro.</div>`;
-  if (!activePlayerId || !state.players.find(p => p.id === activePlayerId))
-    activePlayerId = state.players[0].id;
-  const p = state.players.find(x => x.id === activePlayerId);
+  const poolablePlayers = state.players.filter(x => x.status !== 'staff');
+  if (!poolablePlayers.length) return `<div class="empty"><i class="fa-solid fa-users" style="font-size:26px;opacity:.4"></i><br>Só há staff cadastrada. Adicione jogadores ao roster.</div>`;
+
+  if (!activePlayerId || !poolablePlayers.find(p => p.id === activePlayerId))
+    activePlayerId = poolablePlayers[0].id;
+  const p = poolablePlayers.find(x => x.id === activePlayerId);
   if (!p) return `<div class="empty">Jogador não encontrado.</div>`;
   if (!Array.isArray(p.pool)) p.pool = [];
 
@@ -689,7 +692,7 @@ export function viewPools() {
 
   return `
   <div class="tabs">
-    ${state.players.map(x => `
+    ${state.players.filter(x => x.status !== 'staff').map(x => `
       <button class="tab ${x.id===activePlayerId?'active':''}" data-act="select-player" data-id="${x.id}">
         <span class="dot" style="color:${x.status==='titular'?'#5ee08c':x.status==='reserva'?'#f7bd4a':'#7fb2ff'}"></span>
         ${esc(x.nick)} <span style="opacity:.6;font-size:11px">${x.role}</span>
@@ -755,13 +758,10 @@ export function champCardHTML(c, pid) {
   </div>`;
 }
 
-/* ═══════════════════════════════════════
-   VIEW: MATRIX
-   ═══════════════════════════════════════ */
 export function viewMatrix() {
   const players = [...state.players]
     .filter(p => p.status !== 'staff')
-    .sort((a,b) => ROLE_ORDER[a.role]-ROLE_ORDER[b.role]);
+    .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
   if (!players.length) return `<div class="empty"><i class="fa-solid fa-table" style="font-size:26px;opacity:.4"></i><br>Sem jogadores.</div>`;
 
   const map = new Map();
@@ -776,13 +776,31 @@ export function viewMatrix() {
     const owners = Object.values(tiers);
     const best = TIERS.find(t => owners.includes(t)) || 'C';
     return { champ, tiers, best, count: owners.length };
-  }).sort((a,b) => (TIERS.indexOf(a.best)-TIERS.indexOf(b.best)) || (b.count-a.count) || a.champ.localeCompare(b.champ));
+  }).sort((a, b) => (TIERS.indexOf(a.best) - TIERS.indexOf(b.best)) || (b.count - a.count) || a.champ.localeCompare(b.champ));
+
+  const searchTerm = (window.__akiMatrixFilter || '').toLowerCase().trim();
+  const filtered = searchTerm
+    ? rows.filter(r => r.champ.toLowerCase().includes(searchTerm))
+    : rows;
 
   return `
   <div class="card" style="margin-bottom:16px">
-    <div class="card-head"><h3><i class="fa-solid fa-table"></i> Cobertura — ${rows.length} campeões</h3></div>
-    <div style="font-size:12.5px;color:var(--muted)">Campeões com apenas 1 dono são pontos de fragilidade em draft.</div>
+    <div class="card-head">
+      <h3><i class="fa-solid fa-table"></i> Cobertura — ${rows.length} campeões</h3>
+      <div class="spacer"></div>
+      <div class="matrix-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="matrix-search-input" placeholder="Buscar campeão..." value="${esc(window.__akiMatrixFilter || '')}" autocomplete="off">
+        ${searchTerm ? `<button class="matrix-search-clear" data-act="matrix-clear-search" title="Limpar"><i class="fa-solid fa-xmark"></i></button>` : ''}
+      </div>
+    </div>
+    <div style="font-size:12.5px;color:var(--muted)">
+      ${searchTerm
+        ? `Mostrando <b style="color:var(--primary-light)">${filtered.length}</b> resultado(s) para "<b>${esc(window.__akiMatrixFilter)}</b>"`
+        : 'Campeões com apenas 1 dono são pontos de fragilidade em draft.'}
+    </div>
   </div>
+  ${filtered.length ? `
   <div class="matrix-wrap">
     <table class="matrix">
       <thead><tr><th>Campeão</th>
@@ -790,7 +808,7 @@ export function viewMatrix() {
         <th>Cobertura</th>
       </tr></thead>
       <tbody>
-        ${rows.map(r => `<tr>
+        ${filtered.map(r => `<tr>
           <td>${esc(r.champ)}</td>
           ${players.map(p => {
             const t = r.tiers[p.id];
@@ -800,7 +818,11 @@ export function viewMatrix() {
         </tr>`).join('')}
       </tbody>
     </table>
-  </div>`;
+  </div>` : `
+  <div class="empty">
+    <i class="fa-solid fa-magnifying-glass" style="font-size:26px;opacity:.4"></i><br>
+    Nenhum campeão encontrado com "<b>${esc(window.__akiMatrixFilter)}</b>"
+  </div>`}`;
 }
 
 

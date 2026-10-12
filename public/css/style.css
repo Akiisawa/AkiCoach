@@ -1891,3 +1891,66 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   color:#c9b8f0;
   margin-left:2px;
 }
+
+/* ═══ BUSCA NA MATRIZ ═══ */
+.matrix-search{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#070d16;
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 12px;
+  min-width:220px;
+  transition:.15s;
+}
+.matrix-search:focus-within{
+  border-color:var(--primary);
+  background:#0a1420;
+  box-shadow:0 0 0 3px rgba(74,158,255,.12);
+}
+.matrix-search i.fa-magnifying-glass{
+  color:var(--muted);
+  font-size:11px;
+  flex:0 0 auto;
+}
+.matrix-search:focus-within i.fa-magnifying-glass{
+  color:var(--primary);
+}
+.matrix-search input{
+  flex:1;
+  min-width:0;
+  background:transparent;
+  border:none;
+  color:var(--silver);
+  font-size:12.5px;
+  font-family:inherit;
+  outline:none;
+  padding:2px 0;
+}
+.matrix-search input::placeholder{
+  color:var(--muted);
+}
+.matrix-search-clear{
+  background:transparent;
+  border:none;
+  color:var(--muted);
+  cursor:pointer;
+  font-size:11px;
+  padding:3px;
+  border-radius:4px;
+  transition:.15s;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+}
+.matrix-search-clear:hover{
+  background:rgba(224,82,82,.15);
+  color:#ff9b9b;
+}
+
+@media(max-width:640px){
+  .matrix-search{ min-width:0; flex:1; }
+  .matrix-search input{ font-size:12px; }
+}
