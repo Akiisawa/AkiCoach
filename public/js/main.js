@@ -1,6 +1,6 @@
 import {
   state, seedData, loadFromFirebase, saveToFirebase, listenTeam,
-  TODAY, WEEK, CHAMPS, esc,
+  TODAY, WEEK, CHAMPS, esc, roleIcon, roleName,
   getPlayerSession, setPlayerSession, clearPlayerSession, hashPin
 } from './state.js';
 import {
@@ -82,7 +82,8 @@ let currentView = 'dash';
 let playerModeActive = false;
 
 function renderNav() {
-  const views = playerModeActive ? PLAYER_VIEWS : VIEWS;
+  const isStaffMode = !!window.__akiStaffMode;
+  const views = (playerModeActive && !isStaffMode) ? PLAYER_VIEWS : VIEWS;
 
   const counts = {};
   const sections = [
@@ -113,7 +114,8 @@ function renderNav() {
 }
 
 function go(view) {
-  if (playerModeActive) {
+  const isStaffMode = !!window.__akiStaffMode;
+  if (playerModeActive && !isStaffMode) {
     const allowed = PLAYER_VIEWS.find(v => v.id === view);
     if (!allowed) view = 'player';
   }
@@ -225,6 +227,31 @@ function showPlayerApp(session) {
   requestAnimationFrame(() => setTimeout(hidePreloader, 300));
 }
 
+function showStaffApp(session, p) {
+  playerModeActive = true;
+  document.body.classList.add('player-mode');
+  document.body.classList.add('staff-mode');
+  $('#auth-screen').style.display = 'none';
+  $('#player-screen').style.display = 'none';
+  $('#app').style.display = 'grid';
+  $('#preloader').style.display = 'grid';
+
+  const topActions = $('#player-topbar-actions');
+  topActions.style.display = 'flex';
+  topActions.innerHTML = `
+    <div class="player-topbar staff-topbar">
+      <i class="fa-solid ${roleIcon(p.role)}"></i>
+      <span>${esc(session.nick)}</span>
+      <span class="staff-role-badge">${esc(roleName(p.role))}</span>
+      <button class="btn" data-act="player-logout"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+    </div>`;
+
+  // Se estiver em staff mode, mantém VIEWS normais (coach), não PLAYER_VIEWS
+  // Vou tratar isso no `go` e `renderNav`
+
+  requestAnimationFrame(() => setTimeout(hidePreloader, 300));
+}
+
 function bindAuthForm() {
   const form = $('#auth-form');
   const submit = $('#auth-submit');
@@ -286,21 +313,39 @@ function bindPlayerForm() {
         return;
       }
 
-      // Autentica anonimamente no Firebase pra poder salvar
+      // Autentica anonimamente no Firebase
       await signInAsPlayer();
 
-      const session = {
-        teamUid: entry.teamUid,
-        playerId: entry.playerId,
-        nick: entry.nick,
-        loginAt: Date.now()
-      };
-      setPlayerSession(session);
-
-      const ok = await initPlayerApp(session);
-      if (!ok) {
-        errEl.textContent = 'Erro ao carregar dados do time.';
-        clearPlayerSession();
+      if (entry.isStaff) {
+        // Staff → entra no painel de coach (modo membro)
+        const session = {
+          teamUid: entry.teamUid,
+          playerId: entry.playerId,
+          nick: entry.nick,
+          isStaff: true,
+          loginAt: Date.now()
+        };
+        setPlayerSession(session);
+        const ok = await initStaffApp(session);
+        if (!ok) {
+          errEl.textContent = 'Erro ao carregar dados do time.';
+          clearPlayerSession();
+        }
+      } else {
+        // Jogador comum → painel de jogador
+        const session = {
+          teamUid: entry.teamUid,
+          playerId: entry.playerId,
+          nick: entry.nick,
+          isStaff: false,
+          loginAt: Date.now()
+        };
+        setPlayerSession(session);
+        const ok = await initPlayerApp(session);
+        if (!ok) {
+          errEl.textContent = 'Erro ao carregar dados do time.';
+          clearPlayerSession();
+        }
       }
     } catch (err) {
       console.error(err);
@@ -317,6 +362,9 @@ function bindPlayerForm() {
 async function initApp(user) {
   clearPlayerSession();
   document.body.classList.remove('player-mode');
+  document.body.classList.remove('staff-mode');
+  window.__akiStaffMode = false;
+  window.__akiStaffRole = null;
   $('#player-topbar-actions').style.display = 'none';
   playerModeActive = false;
 
@@ -379,6 +427,33 @@ async function initPlayerApp(session) {
   }
 }
 
+async function initStaffApp(session) {
+  try {
+    state.teamUid = session.teamUid;
+    const ok = await loadFromFirebase(session.teamUid);
+    if (!ok) return false;
+
+    const p = state.players.find(x => x.id === session.playerId);
+    if (!p) return false;
+
+    window.__akiCurrentPlayer = session.playerId;
+    window.__akiPlayerNick = session.nick;
+    window.__akiStaffMode = true;
+    window.__akiStaffRole = p.role;
+
+    playerModeActive = true;
+    showStaffApp(session, p);
+    go('dash');
+    tickClock();
+
+    listenTeam(session.teamUid, () => { renderView(); });
+    return true;
+  } catch (e) {
+    console.error('Staff init falhou:', e);
+    return false;
+  }
+}
+
 onAuth(async user => {
   if (user) {
     try { await initApp(user); }
@@ -392,8 +467,13 @@ onAuth(async user => {
 
   const session = getPlayerSession();
   if (session) {
-    const ok = await initPlayerApp(session);
-    if (ok) return;
+    if (session.isStaff) {
+      const ok = await initStaffApp(session);
+      if (ok) return;
+    } else {
+      const ok = await initPlayerApp(session);
+      if (ok) return;
+    }
     clearPlayerSession();
   }
 
@@ -417,7 +497,10 @@ setPlayerLogoutHandler(() => {
     clearPlayerSession();
     window.__akiCurrentPlayer = null;
     window.__akiPlayerNick = null;
+    window.__akiStaffMode = false;
+    window.__akiStaffRole = null;
     document.body.classList.remove('player-mode');
+    document.body.classList.remove('staff-mode');
     playerModeActive = false;
     $('#player-topbar-actions').style.display = 'none';
     closeModal();
