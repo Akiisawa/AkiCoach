@@ -5,6 +5,23 @@ import { state, CHAMPS, esc, saveToFirebase } from './state.js';
 import { champIconName } from './riot-api.js';
 import { toastIcon } from './ui.js';
 
+import { dbUpdate } from './firebase.js';
+
+function saveAndRender() {
+  if (state.teamUid) {
+    dbUpdate(`teams/${state.teamUid}`, {
+      draft: state.draft,
+      fearless: state.fearless,
+      draftTimer: state.draftTimer,
+    }).catch(e => console.warn('Save falhou:', e));
+  }
+  document.dispatchEvent(new CustomEvent('aki:rerender'));
+}
+
+export function tickDraftTimer() {
+  if (state.draftTimer?.running) updateTimerUI();
+}
+
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
@@ -15,10 +32,6 @@ function iconUrl(name) {
   return `${DDRAGON}/img/champion/${champIconName(name)}.png`;
 }
 
-function saveAndRender() {
-  saveToFirebase().catch(e => console.warn('Save falhou:', e));
-  document.dispatchEvent(new CustomEvent('aki:rerender'));
-}
 
 function closePicker() {
   $('#modal-root').innerHTML = '';
@@ -168,34 +181,46 @@ export function clearDraftSlot(slot) {
   }
 }
 
-/* ═══════════════════════════════════════
-   TIMER
-   ═══════════════════════════════════════ */
 let _timerInterval = null;
-let _timerValue = 30;
+
+function computeRemaining() {
+  const t = state.draftTimer;
+  if (!t.running) return t.value;
+  const elapsed = Math.floor((Date.now() - t.startedAt) / 1000);
+  return Math.max(0, t.duration - elapsed);
+}
 
 function updateTimerUI() {
+  const v = computeRemaining();
   const el = document.getElementById('draft-timer-value');
-  if (el) el.textContent = _timerValue;
+  if (el) el.textContent = v;
   const wrap = document.getElementById('draft-timer');
   if (wrap) {
-    wrap.classList.toggle('warning', _timerValue <= 10 && _timerValue > 5);
-    wrap.classList.toggle('danger', _timerValue <= 5 && _timerValue > 0);
+    wrap.classList.toggle('warning', v <= 10 && v > 5);
+    wrap.classList.toggle('danger', v <= 5 && v > 0);
   }
 }
 
 export function startDraftTimer(seconds = 30) {
   stopDraftTimer();
-  _timerValue = seconds;
-  updateTimerUI();
+  state.draftTimer = {
+    running: true,
+    value: seconds,
+    duration: seconds,
+    startedAt: Date.now(),
+  };
+  saveAndRender();          // ← agora o estado vai pro Firebase
   _timerInterval = setInterval(() => {
-    _timerValue--;
+    const v = computeRemaining();
     updateTimerUI();
-    if (_timerValue <= 0) {
+    if (v <= 0) {
       stopDraftTimer();
+      state.draftTimer.running = false;
+      state.draftTimer.value = 0;
+      saveAndRender();
       toastIcon('Tempo esgotado!', 'fa-clock');
     }
-  }, 1000);
+  }, 250);
 }
 
 export function stopDraftTimer() {
@@ -204,8 +229,9 @@ export function stopDraftTimer() {
 
 export function resetDraftTimer(seconds = 30) {
   stopDraftTimer();
-  _timerValue = seconds;
+  state.draftTimer = { running: false, value: seconds, duration: seconds, startedAt: 0 };
   updateTimerUI();
+  saveAndRender();
 }
 
 /* ═══════════════════════════════════════

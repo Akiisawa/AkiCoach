@@ -1,4 +1,4 @@
-import { dbGet, dbSet, dbListen } from './firebase.js';
+import { dbSet, dbGet, dbListen, dbUpdate } from './firebase.js';
 
 export const ROLES = [
   { id:'TOP', name:'Topo', icon:'fa-shield-halved' },
@@ -187,6 +187,7 @@ export async function loadFromFirebase(uid) {
   state.fearless = data.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
   state.counters = data.counters || {};
   state.draft = data.draft || state.draft;
+  state.draftTimer = data.draftTimer || { running: false, value: 30, duration: 30, startedAt: 0 };
   state.countersSeeded = data.countersSeeded || false;
   state.comps = data.comps ? Object.values(data.comps) : [];
   state.notes = data.notes ? Object.values(data.notes) : [];
@@ -207,6 +208,7 @@ export async function saveToFirebase() {
     drafts: state.drafts,
     draft: state.draft,
     fearless: state.fearless,
+    draftTimer: state.draftTimer,
     counters: state.counters,
     countersSeeded: state.countersSeeded,
     comps: state.comps,
@@ -228,6 +230,7 @@ export function listenTeam(uid, cb) {
     if (data.tournaments) state.tournaments = Object.values(data.tournaments);
     if (data.drafts) state.drafts = Object.values(data.drafts);
     if (data.draft) state.draft = data.draft;
+    if (data.draftTimer) state.draftTimer = data.draftTimer;
     if (data.fearless) state.fearless = data.fearless;
     if (data.counters !== undefined) state.counters = data.counters;
     if (data.countersSeeded !== undefined) state.countersSeeded = data.countersSeeded;
@@ -266,3 +269,25 @@ export async function hashPin(nick, pin) {
 export function generatePin() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
+
+let _saveTimer = null;
+function saveAndRender() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    if (state.teamUid) {
+      dbUpdate(`teams/${state.teamUid}`, {
+        draft: state.draft,
+        fearless: state.fearless,
+        draftTimer: state.draftTimer,
+      }).catch(e => console.warn('Save falhou:', e));
+    }
+  }, 150);
+  document.dispatchEvent(new CustomEvent('aki:rerender'));
+}
+
+state.draftTimer = {
+  running: false,
+  value: 30,
+  startedAt: 0,   // timestamp do início
+  duration: 30,
+};

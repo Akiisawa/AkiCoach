@@ -1033,7 +1033,12 @@ export function viewDraft() {
   <div class="draft-toolbar">
     <div class="draft-timer" id="draft-timer">
       <span class="draft-timer-label">TIMER</span>
-      <span class="draft-timer-value" id="draft-timer-value">30</span>
+<span class="draft-timer-value" id="draft-timer-value">
+  ${state.draftTimer?.running
+      ? Math.max(0, state.draftTimer.duration -
+          Math.floor((Date.now() - state.draftTimer.startedAt)/1000))
+      : (state.draftTimer?.value ?? 30)}
+</span>
       <span class="draft-timer-unit">s</span>
     </div>
     <button class="btn primary" data-act="draft-timer-start"><i class="fa-solid fa-play"></i> Iniciar</button>

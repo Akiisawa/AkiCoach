@@ -1,4 +1,7 @@
 import { initDraftDragDrop } from './champion-picker.js';
+import { tickDraftTimer } from './champion-picker.js';
+
+setInterval(tickDraftTimer, 250);
 import {
   state, seedData, loadFromFirebase, saveToFirebase, listenTeam,
   TODAY, WEEK, CHAMPS, esc, roleIcon, roleName,
