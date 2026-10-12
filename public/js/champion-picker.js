@@ -129,9 +129,12 @@ export function openChampionPicker(side, kind, idx) {
    APLICAR PICK EM UM SLOT
    ═══════════════════════════════════════ */
 export function pickChampion(side, kind, idx, champ) {
+  if (!champ) {
+    console.warn('[pickChampion] chamado sem campeão', { side, kind, idx });
+    return false;
+  }
   if (!state.draft[side]) state.draft[side] = { bans: ['','','','',''], picks: ['','','','',''] };
 
-  // Bloqueia duplicata
   const used = [];
   ['blue', 'red'].forEach(s => {
     ['bans', 'picks'].forEach(k => {
@@ -261,6 +264,6 @@ export function initDraftDragDrop() {
     if (!slotPath) return;
 
     const [side, kind, idx] = slotPath.split('.');
-    pickChampion(side, kind, +idx);
+pickChampion(side, kind, +idx, champ);
   });
 }
