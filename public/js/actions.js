@@ -768,6 +768,7 @@ export function bindActions() {
       'new-scrim', 'edit-scrim', 'del-scrim',
       'new-tournament', 'edit-tournament', 'del-tournament',
       'save-draft', 'clear-draft', 'load-draft', 'del-draft',
+      'toggle-fearless', 'set-fearless-series', 'fearless-next-game', 'fearless-reset',
       'new-note', 'edit-note', 'del-note',
       'new-task', 'edit-task', 'del-task',
       'new-opponent', 'edit-opponent', 'del-opponent',
@@ -779,7 +780,11 @@ export function bindActions() {
       'new-event', 'edit-event', 'del-event',
       'new-player', 'edit-player', 'del-player', 'edit-team', 'link-riot',
       'new-scrim', 'edit-scrim', 'del-scrim',
-      'new-tournament', 'edit-tournament', 'del-tournament'
+      'new-tournament', 'edit-tournament', 'del-tournament',
+      'draft-pick', 'draft-clear', 'draft-timer-start', 'draft-timer-reset',
+      'toggle-fearless', 'set-fearless-series', 'fearless-next-game', 'fearless-reset',
+      'draft-suggest-fill',
+      'save-draft', 'clear-draft', 'load-draft', 'del-draft'
     ];
 
     if (isPlayerMode()) {
@@ -895,6 +900,46 @@ export function bindActions() {
           }
         }
         if (!filled) toastIcon('Nenhum slot livre', 'fa-triangle-exclamation');
+        break;
+      }
+      case 'toggle-fearless': {
+        if (!state.fearless) state.fearless = { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
+        state.fearless.enabled = !state.fearless.enabled;
+        toastIcon(state.fearless.enabled ? '🔥 Fearless Draft ativado' : 'Fearless Draft desativado', state.fearless.enabled ? 'fa-fire' : 'fa-circle-info');
+        save(); render();
+        break;
+      }
+      case 'set-fearless-series': {
+        const val = +t.value;
+        if (!state.fearless) break;
+        state.fearless.totalGames = val;
+        // Se reduzir pra menos que o jogo atual, volta
+        if (state.fearless.currentGame > val) state.fearless.currentGame = val;
+        save(); render();
+        break;
+      }
+      case 'fearless-next-game': {
+        if (!state.fearless?.enabled) break;
+        fearlessNextGame();
+        break;
+      }
+      case 'fearless-reset': {
+        if (!state.fearless) break;
+        modalConfirm(
+          'Resetar Série Fearless',
+          'Volta ao Jogo 1, limpa o board atual e remove todos os campeões bloqueados. Continuar?',
+          () => {
+            state.fearless.currentGame = 1;
+            state.fearless.lockedChamps = [];
+            state.fearless.history = [];
+            state.draft = {
+              blue: { bans: ['','','','',''], picks: ['','','','',''] },
+              red:  { bans: ['','','','',''], picks: ['','','','',''] }
+            };
+            save(); render();
+            toastIcon('Série resetada', 'fa-arrows-rotate');
+          }
+        );
         break;
       }
       case 'save-draft': modalSaveDraft(); break;
@@ -1421,4 +1466,62 @@ export function modalViewOpponent(id) {
   backdrop.addEventListener('mousedown', e => { if (e.target === backdrop) closeModal(); });
   $$('[data-close]', root).forEach(b => b.addEventListener('click', closeModal));
   document.addEventListener('keydown', escHandler);
+}
+
+/* ═══════════════════════════════════════
+   FEARLESS: próximo jogo
+   ═══════════════════════════════════════ */
+export function fearlessNextGame() {
+  if (!state.fearless?.enabled) return;
+
+  const d = state.draft;
+  const picks = [...d.blue.picks, ...d.red.picks].filter(Boolean);
+  const bans = [...d.blue.bans, ...d.red.bans].filter(Boolean);
+
+  if (!picks.length && !bans.length) {
+    toastIcon('Board está vazio. Preencha o jogo antes de avançar.', 'fa-triangle-exclamation');
+    return;
+  }
+
+  if (state.fearless.currentGame >= state.fearless.totalGames) {
+    modalConfirm(
+      'Fim da Série',
+      'Você chegou no último jogo da série. Deseja resetar a série e começar do Jogo 1?',
+      () => {
+        state.fearless.currentGame = 1;
+        state.fearless.lockedChamps = [];
+        state.fearless.history = [];
+        state.draft = {
+          blue: { bans: ['','','','',''], picks: ['','','','',''] },
+          red:  { bans: ['','','','',''], picks: ['','','','',''] }
+        };
+        save(); render();
+        toastIcon('Nova série iniciada', 'fa-fire');
+      }
+    );
+    return;
+  }
+
+  // Salva histórico do jogo atual
+  state.fearless.history = state.fearless.history || [];
+  state.fearless.history.push({
+    game: state.fearless.currentGame,
+    blue: { picks: [...d.blue.picks], bans: [...d.blue.bans] },
+    red:  { picks: [...d.red.picks],  bans: [...d.red.bans]  },
+    date: Date.now()
+  });
+
+  // Adiciona picks ao pool de bloqueados (não bloqueia bans)
+  const newLocked = [...new Set([...(state.fearless.lockedChamps || []), ...picks])];
+  state.fearless.lockedChamps = newLocked;
+
+  // Avança o jogo e limpa board
+  state.fearless.currentGame++;
+  state.draft = {
+    blue: { bans: ['','','','',''], picks: ['','','','',''] },
+    red:  { bans: ['','','','',''], picks: ['','','','',''] }
+  };
+
+  save(); render();
+  toastIcon(`Jogo ${state.fearless.currentGame} — ${newLocked.length} campeões bloqueados`, 'fa-forward');
 }

@@ -449,6 +449,7 @@ async function initStaffApp(session) {
     tickClock();
 
     listenTeam(session.teamUid, () => { renderView(); });
+    initDraftDragDrop();
     return true;
   } catch (e) {
     console.error('Staff init falhou:', e);

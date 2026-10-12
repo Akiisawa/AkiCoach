@@ -1,0 +1,869 @@
+{
+  "champions": {
+    "Aatrox": {
+      "strong": ["Ornn", "Gnar", "Illaoi"],
+      "weak": ["Fiora", "Jax", "Irelia"],
+      "confidence": "high"
+    },
+    "Ahri": {
+      "strong": ["Lux", "Twisted Fate", "Syndra"],
+      "weak": ["Sylas", "Yone", "Fizz"],
+      "confidence": "high"
+    },
+    "Akali": {
+      "strong": ["Syndra", "Orianna", "Viktor"],
+      "weak": ["Vex", "Galio", "Pantheon"],
+      "confidence": "high"
+    },
+    "Akshan": {
+      "strong": ["Kassadin", "Veigar", "Ryze"],
+      "weak": ["Malphite", "Irelia", "Pantheon"],
+      "confidence": "high"
+    },
+    "Alistar": {
+      "strong": ["Braum", "Tahm Kench", "Taric"],
+      "weak": ["Morgana", "Janna", "Thresh"],
+      "confidence": "high"
+    },
+    "Ambessa": {
+      "strong": ["Gnar", "Jayce", "Kayle"],
+      "weak": ["Jax", "Fiora", "Renekton"],
+      "confidence": "medium"
+    },
+    "Amumu": {
+      "strong": ["Sejuani", "Zac", "Jarvan IV"],
+      "weak": ["Lee Sin", "Kindred", "Viego"],
+      "confidence": "high"
+    },
+    "Anivia": {
+      "strong": ["Ryze", "Twisted Fate", "Azir"],
+      "weak": ["Kassadin", "Sylas", "Yone"],
+      "confidence": "high"
+    },
+    "Annie": {
+      "strong": ["Kassadin", "Akali", "Katarina"],
+      "weak": ["Syndra", "Orianna", "Viktor"],
+      "confidence": "high"
+    },
+    "Aphelios": {
+      "strong": ["Jinx", "Ezreal", "Kog'Maw"],
+      "weak": ["Draven", "Samira", "Lucian"],
+      "confidence": "high"
+    },
+    "Ashe": {
+      "strong": ["Jinx", "Aphelios", "Kog'Maw"],
+      "weak": ["Samira", "Draven", "Tristana"],
+      "confidence": "high"
+    },
+    "Aurelion Sol": {
+      "strong": ["Viktor", "Syndra", "Orianna"],
+      "weak": ["Akshan", "Tristana", "Fizz"],
+      "confidence": "high"
+    },
+    "Aurora": {
+      "strong": ["Yone", "Sylas", "Akali"],
+      "weak": ["Azir", "Orianna", "Viktor"],
+      "confidence": "medium"
+    },
+    "Azir": {
+      "strong": ["Orianna", "Ahri", "Viktor"],
+      "weak": ["Sylas", "Yone", "Kassadin"],
+      "confidence": "high"
+    },
+    "Bard": {
+      "strong": ["Yuumi", "Soraka", "Sona"],
+      "weak": ["Nautilus", "Leona", "Blitzcrank"],
+      "confidence": "high"
+    },
+    "Bel'Veth": {
+      "strong": ["Amumu", "Rammus", "Sejuani"],
+      "weak": ["Graves", "Kha'Zix", "Rek'Sai"],
+      "confidence": "high"
+    },
+    "Blitzcrank": {
+      "strong": ["Sona", "Yuumi", "Soraka"],
+      "weak": ["Morgana", "Leona", "Alistar"],
+      "confidence": "high"
+    },
+    "Brand": {
+      "strong": ["Zyra", "Lux", "Seraphine"],
+      "weak": ["Nautilus", "Leona", "Pyke"],
+      "confidence": "high"
+    },
+    "Braum": {
+      "strong": ["Miss Fortune", "Ashe", "Lucian"],
+      "weak": ["Morgana", "Zyra", "Brand"],
+      "confidence": "high"
+    },
+    "Briar": {
+      "strong": ["Amumu", "Sejuani", "Jarvan IV"],
+      "weak": ["Graves", "Shaco", "Kindred"],
+      "confidence": "medium"
+    },
+    "Caitlyn": {
+      "strong": ["Vayne", "Kai'Sa", "Ezreal"],
+      "weak": ["Draven", "Samira", "Tristana"],
+      "confidence": "high"
+    },
+    "Camille": {
+      "strong": ["Kayle", "Gangplank", "Singed"],
+      "weak": ["Jax", "Renekton", "Poppy"],
+      "confidence": "high"
+    },
+    "Cassiopeia": {
+      "strong": ["Sylas", "Yasuo", "Yone"],
+      "weak": ["Kassadin", "Syndra", "Zoe"],
+      "confidence": "high"
+    },
+    "Cho'Gath": {
+      "strong": ["Yasuo", "Yone", "Akali"],
+      "weak": ["Fiora", "Vayne", "Gwen"],
+      "confidence": "high"
+    },
+    "Corki": {
+      "strong": ["Azir", "Veigar", "Ryze"],
+      "weak": ["Tristana", "Lucian", "Yone"],
+      "confidence": "high"
+    },
+    "Darius": {
+      "strong": ["Aatrox", "Sett", "Ornn"],
+      "weak": ["Vayne", "Quinn", "Jayce"],
+      "confidence": "high"
+    },
+    "Diana": {
+      "strong": ["Kassadin", "Twisted Fate", "Lux"],
+      "weak": ["Sylas", "Rek'Sai", "Viego"],
+      "confidence": "high"
+    },
+    "Dr. Mundo": {
+      "strong": ["Garen", "Sett", "Darius"],
+      "weak": ["Fiora", "Aatrox", "K'Sante"],
+      "confidence": "high"
+    },
+    "Draven": {
+      "strong": ["Kai'Sa", "Jinx", "Ezreal"],
+      "weak": ["Caitlyn", "Ashe", "Miss Fortune"],
+      "confidence": "high"
+    },
+    "Ekko": {
+      "strong": ["Lux", "Twisted Fate", "Veigar"],
+      "weak": ["Sylas", "Akali", "Cassiopeia"],
+      "confidence": "high"
+    },
+    "Elise": {
+      "strong": ["Amumu", "Sejuani", "Karthus"],
+      "weak": ["Kha'Zix", "Graves", "Bel'Veth"],
+      "confidence": "high"
+    },
+    "Evelynn": {
+      "strong": ["Karthus", "Taliyah", "Lux"],
+      "weak": ["Rengar", "Kha'Zix", "Lee Sin"],
+      "confidence": "high"
+    },
+    "Ezreal": {
+      "strong": ["Kai'Sa", "Vayne", "Jhin"],
+      "weak": ["Draven", "Samira", "Lucian"],
+      "confidence": "high"
+    },
+    "Fiddlesticks": {
+      "strong": ["Vi", "Lee Sin", "Amumu"],
+      "weak": ["Sejuani", "Maokai", "Lillia"],
+      "confidence": "high"
+    },
+    "Fiora": {
+      "strong": ["Camille", "Jax", "Cho'Gath"],
+      "weak": ["Malphite", "Quinn", "Wukong"],
+      "confidence": "high"
+    },
+    "Fizz": {
+      "strong": ["Lux", "Syndra", "Twisted Fate"],
+      "weak": ["Pantheon", "Cassiopeia", "Akshan"],
+      "confidence": "high"
+    },
+    "Galio": {
+      "strong": ["Sylas", "Akali", "Cassiopeia"],
+      "weak": ["Anivia", "Azir", "Veigar"],
+      "confidence": "high"
+    },
+    "Gangplank": {
+      "strong": ["Ornn", "Malphite", "Cho'Gath"],
+      "weak": ["Lucian", "Irelia", "Camille"],
+      "confidence": "high"
+    },
+    "Garen": {
+      "strong": ["Riven", "Yasuo", "Fiora"],
+      "weak": ["Vayne", "Quinn", "Kayle"],
+      "confidence": "high"
+    },
+    "Gnar": {
+      "strong": ["Ornn", "Aatrox", "Cho'Gath"],
+      "weak": ["Jax", "Renekton", "Irelia"],
+      "confidence": "high"
+    },
+    "Gragas": {
+      "strong": ["Yasuo", "Yone", "Aatrox"],
+      "weak": ["Fiora", "Sylas", "Darius"],
+      "confidence": "high"
+    },
+    "Graves": {
+      "strong": ["Kha'Zix", "Taliyah", "Ekko"],
+      "weak": ["Fiddlesticks", "Amumu", "Rammus"],
+      "confidence": "high"
+    },
+    "Gwen": {
+      "strong": ["Ornn", "Cho'Gath", "K'Sante"],
+      "weak": ["Renekton", "Pantheon", "Jax"],
+      "confidence": "high"
+    },
+    "Hecarim": {
+      "strong": ["Taliyah", "Karthus", "Ivern"],
+      "weak": ["Rammus", "Poppy", "Sejuani"],
+      "confidence": "high"
+    },
+    "Heimerdinger": {
+      "strong": ["Yasuo", "Yone", "Sylas"],
+      "weak": ["Syndra", "Orianna", "Ahri"],
+      "confidence": "high"
+    },
+    "Hwei": {
+      "strong": ["Ryze", "Twisted Fate", "Lux"],
+      "weak": ["Fizz", "Zed", "Kassadin"],
+      "confidence": "high"
+    },
+    "Illaoi": {
+      "strong": ["Ornn", "Cho'Gath", "Shen"],
+      "weak": ["Vayne", "Mordekaiser", "Quinn"],
+      "confidence": "high"
+    },
+    "Irelia": {
+      "strong": ["Jayce", "Gnar", "Kayle"],
+      "weak": ["Malphite", "Warwick", "Sett"],
+      "confidence": "high"
+    },
+    "Ivern": {
+      "strong": ["Master Yi", "Amumu", "Rammus"],
+      "weak": ["Graves", "Kindred", "Kha'Zix"],
+      "confidence": "high"
+    },
+    "Janna": {
+      "strong": ["Leona", "Nautilus", "Pyke"],
+      "weak": ["Soraka", "Sona", "Brand"],
+      "confidence": "high"
+    },
+    "Jarvan IV": {
+      "strong": ["Amumu", "Taliyah", "Karthus"],
+      "weak": ["Poppy", "Sejuani", "Trundle"],
+      "confidence": "high"
+    },
+    "Jax": {
+      "strong": ["Renekton", "Gnar", "Aatrox"],
+      "weak": ["Malphite", "Gragas", "Poppy"],
+      "confidence": "high"
+    },
+    "Jayce": {
+      "strong": ["Kayle", "Singed", "Nasus"],
+      "weak": ["Malphite", "Irelia", "Ornn"],
+      "confidence": "high"
+    },
+    "Jhin": {
+      "strong": ["Kai'Sa", "Ezreal", "Vayne"],
+      "weak": ["Samira", "Tristana", "Draven"],
+      "confidence": "high"
+    },
+    "Jinx": {
+      "strong": ["Varus", "Smolder", "Ezreal"],
+      "weak": ["Kai'Sa", "Xayah", "Draven"],
+      "confidence": "high"
+    },
+    "K'Sante": {
+      "strong": ["Aatrox", "Gnar", "Renekton"],
+      "weak": ["Fiora", "Gwen", "Mordekaiser"],
+      "confidence": "high"
+    },
+    "Kai'Sa": {
+      "strong": ["Jinx", "Varus", "Smolder"],
+      "weak": ["Xayah", "Caitlyn", "Draven"],
+      "confidence": "high"
+    },
+    "Kalista": {
+      "strong": ["Vayne", "Kai'Sa", "Ezreal"],
+      "weak": ["Jinx", "Ashe", "Caitlyn"],
+      "confidence": "high"
+    },
+    "Karma": {
+      "strong": ["Braum", "Tahm Kench", "Taric"],
+      "weak": ["Nautilus", "Leona", "Pyke"],
+      "confidence": "high"
+    },
+    "Karthus": {
+      "strong": ["Amumu", "Sejuani", "Zac"],
+      "weak": ["Rengar", "Kha'Zix", "Evelynn"],
+      "confidence": "high"
+    },
+    "Kassadin": {
+      "strong": ["Viktor", "Orianna", "Syndra"],
+      "weak": ["Akshan", "Tristana", "Lucian"],
+      "confidence": "high"
+    },
+    "Katarina": {
+      "strong": ["Veigar", "Lux", "Ahri"],
+      "weak": ["Pantheon", "Cassiopeia", "Vex"],
+      "confidence": "high"
+    },
+    "Kayle": {
+      "strong": ["Ornn", "Cho'Gath", "Malphite"],
+      "weak": ["Jax", "Irelia", "Camille"],
+      "confidence": "high"
+    },
+    "Kayn": {
+      "strong": ["Amumu", "Sejuani", "Maokai"],
+      "weak": ["Graves", "Kindred", "Rek'Sai"],
+      "confidence": "high"
+    },
+    "Kennen": {
+      "strong": ["Gnar", "Ornn", "Cho'Gath"],
+      "weak": ["Malphite", "Irelia", "Jayce"],
+      "confidence": "high"
+    },
+    "Kha'Zix": {
+      "strong": ["Evelynn", "Taliyah", "Karthus"],
+      "weak": ["Rammus", "Amumu", "Poppy"],
+      "confidence": "high"
+    },
+    "Kindred": {
+      "strong": ["Amumu", "Sejuani", "Maokai"],
+      "weak": ["Graves", "Kha'Zix", "Rengar"],
+      "confidence": "high"
+    },
+    "Kled": {
+      "strong": ["Fiora", "Jax", "Camille"],
+      "weak": ["Malphite", "Shen", "Poppy"],
+      "confidence": "high"
+    },
+    "Kog'Maw": {
+      "strong": ["Jinx", "Ezreal", "Kai'Sa"],
+      "weak": ["Draven", "Samira", "Caitlyn"],
+      "confidence": "high"
+    },
+    "LeBlanc": {
+      "strong": ["Twisted Fate", "Lux", "Ryze"],
+      "weak": ["Vex", "Galio", "Syndra"],
+      "confidence": "high"
+    },
+    "Lee Sin": {
+      "strong": ["Vi", "Fiddlesticks", "Amumu"],
+      "weak": ["Sejuani", "Maokai", "Lillia"],
+      "confidence": "high"
+    },
+    "Leona": {
+      "strong": ["Soraka", "Sona", "Yuumi"],
+      "weak": ["Morgana", "Janna", "Thresh"],
+      "confidence": "high"
+    },
+    "Lillia": {
+      "strong": ["Sejuani", "Maokai", "Amumu"],
+      "weak": ["Lee Sin", "Fiddlesticks", "Kha'Zix"],
+      "confidence": "high"
+    },
+    "Lissandra": {
+      "strong": ["Akali", "Sylas", "Yasuo"],
+      "weak": ["Syndra", "Orianna", "Viktor"],
+      "confidence": "high"
+    },
+    "Locke": {
+      "strong": ["Lux", "Veigar"],
+      "weak": ["Galio", "Vex"],
+      "confidence": "low"
+    },
+    "Lucian": {
+      "strong": ["Ezreal", "Jinx", "Kai'Sa"],
+      "weak": ["Ashe", "Caitlyn", "Draven"],
+      "confidence": "high"
+    },
+    "Lulu": {
+      "strong": ["Nautilus", "Leona", "Pyke"],
+      "weak": ["Nami", "Brand", "Zyra"],
+      "confidence": "high"
+    },
+    "Lux": {
+      "strong": ["Sylas", "Ahri", "Twisted Fate"],
+      "weak": ["Fizz", "Zed", "Yone"],
+      "confidence": "high"
+    },
+    "Malphite": {
+      "strong": ["Jayce", "Irelia", "Jax"],
+      "weak": ["Sylas", "Mordekaiser", "Cho'Gath"],
+      "confidence": "high"
+    },
+    "Malzahar": {
+      "strong": ["Akali", "Sylas", "Zed"],
+      "weak": ["Syndra", "Orianna", "Viktor"],
+      "confidence": "high"
+    },
+    "Maokai": {
+      "strong": ["Lee Sin", "Vi", "Amumu"],
+      "weak": ["Lillia", "Fiddlesticks", "Gwen"],
+      "confidence": "high"
+    },
+    "Master Yi": {
+      "strong": ["Amumu", "Rammus", "Sejuani"],
+      "weak": ["Jax", "Pantheon", "Poppy"],
+      "confidence": "high"
+    },
+    "Mel": {
+      "strong": [],
+      "weak": [],
+      "confidence": "low"
+    },
+    "Milio": {
+      "strong": ["Nautilus", "Leona", "Blitzcrank"],
+      "weak": ["Brand", "Zyra", "Soraka"],
+      "confidence": "high"
+    },
+    "Miss Fortune": {
+      "strong": ["Vayne", "Kai'Sa", "Ezreal"],
+      "weak": ["Tristana", "Draven", "Samira"],
+      "confidence": "high"
+    },
+    "Mordekaiser": {
+      "strong": ["Ornn", "Malphite", "Shen"],
+      "weak": ["Vayne", "Fiora", "Olaf"],
+      "confidence": "high"
+    },
+    "Morgana": {
+      "strong": ["Blitzcrank", "Thresh", "Nautilus"],
+      "weak": ["Zyra", "Brand", "Karma"],
+      "confidence": "high"
+    },
+    "Naafiri": {
+      "strong": ["Lux", "Veigar", "Syndra"],
+      "weak": ["Zed", "Fizz", "Akali"],
+      "confidence": "high"
+    },
+    "Nami": {
+      "strong": ["Lulu", "Renata Glasc"],
+      "weak": ["Nautilus", "Rakan"],
+      "confidence": "high"
+    },
+    "Nasus": {
+      "strong": ["Yasuo", "Yone"],
+      "weak": ["Darius", "Illaoi", "Mordekaiser"],
+      "confidence": "high"
+    },
+    "Nautilus": {
+      "strong": ["Rakan", "Lulu", "Nami"],
+      "weak": ["Renata Glasc", "Morgana"],
+      "confidence": "high"
+    },
+    "Neeko": {
+      "strong": ["Sylas", "Akali", "Yone"],
+      "weak": ["Syndra", "Viktor", "Orianna"],
+      "confidence": "high"
+    },
+    "Nidalee": {
+      "strong": ["Amumu", "Sejuani", "Taliyah"],
+      "weak": ["Rammus", "Kha'Zix", "Graves"],
+      "confidence": "high"
+    },
+    "Nilah": {
+      "strong": ["Ashe", "Jinx"],
+      "weak": ["Caitlyn", "Ezreal", "Varus"],
+      "confidence": "high"
+    },
+    "Nocturne": {
+      "strong": ["Karthus", "Taliyah", "Amumu"],
+      "weak": ["Rammus", "Rek'Sai", "Lee Sin"],
+      "confidence": "high"
+    },
+    "Nunu": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Viego", "Graves", "Kindred"],
+      "confidence": "high"
+    },
+    "Olaf": {
+      "strong": ["Darius", "Mordekaiser", "Ornn"],
+      "weak": ["Fiora", "Jax", "Vayne"],
+      "confidence": "high"
+    },
+    "Orianna": {
+      "strong": ["Azir", "Ahri"],
+      "weak": ["Sylas", "Yone", "Aurora"],
+      "confidence": "high"
+    },
+    "Ornn": {
+      "strong": ["Gnar"],
+      "weak": ["Jax", "Aatrox", "Renekton"],
+      "confidence": "high"
+    },
+    "Pantheon": {
+      "strong": ["Yasuo", "Yone", "Akali"],
+      "weak": ["Malphite", "Illaoi", "Sett"],
+      "confidence": "high"
+    },
+    "Poppy": {
+      "strong": ["Riven", "Jax", "Camille"],
+      "weak": ["Darius", "Illaoi", "Gangplank"],
+      "confidence": "high"
+    },
+    "Pyke": {
+      "strong": ["Soraka", "Sona", "Yuumi"],
+      "weak": ["Lulu", "Janna", "Morgana"],
+      "confidence": "high"
+    },
+    "Qiyana": {
+      "strong": ["Lux", "Twisted Fate", "Veigar"],
+      "weak": ["Galio", "Vex", "Pantheon"],
+      "confidence": "high"
+    },
+    "Quinn": {
+      "strong": ["Darius", "Garen", "Nasus"],
+      "weak": ["Malphite", "Irelia", "Teemo"],
+      "confidence": "high"
+    },
+    "Rakan": {
+      "strong": ["Lulu", "Nami"],
+      "weak": ["Nautilus", "Renata Glasc"],
+      "confidence": "high"
+    },
+    "Rammus": {
+      "strong": ["Master Yi", "Bel'Veth", "Yasuo"],
+      "weak": ["Morgana", "Trundle", "Kayn"],
+      "confidence": "high"
+    },
+    "Rek'Sai": {
+      "strong": ["Kha'Zix", "Evelynn", "Taliyah"],
+      "weak": ["Illaoi", "Poppy", "Rammus"],
+      "confidence": "high"
+    },
+    "Rell": {
+      "strong": ["Braum", "Tahm Kench"],
+      "weak": ["Janna", "Morgana", "Zyra"],
+      "confidence": "high"
+    },
+    "Renata Glasc": {
+      "strong": ["Nautilus", "Rakan"],
+      "weak": ["Lulu", "Nami"],
+      "confidence": "high"
+    },
+    "Renekton": {
+      "strong": ["Aatrox", "Gnar"],
+      "weak": ["Jax", "Ornn"],
+      "confidence": "high"
+    },
+    "Rengar": {
+      "strong": ["Evelynn", "Karthus", "Twitch"],
+      "weak": ["Rammus", "Poppy", "Lee Sin"],
+      "confidence": "high"
+    },
+    "Riven": {
+      "strong": ["Yasuo", "Yone"],
+      "weak": ["Garen", "Renekton", "Poppy"],
+      "confidence": "high"
+    },
+    "Rumble": {
+      "strong": ["Ornn", "Cho'Gath", "Aatrox"],
+      "weak": ["Yone", "Sylas", "Irelia"],
+      "confidence": "high"
+    },
+    "Ryze": {
+      "strong": ["Twisted Fate", "Kassadin"],
+      "weak": ["Anivia", "Cassiopeia", "Syndra"],
+      "confidence": "high"
+    },
+    "Samira": {
+      "strong": ["Jinx", "Aphelios", "Ashe"],
+      "weak": ["Caitlyn", "Varus", "Ezreal"],
+      "confidence": "high"
+    },
+    "Sejuani": {
+      "strong": ["Lee Sin", "Maokai"],
+      "weak": ["Vi", "Lillia"],
+      "confidence": "high"
+    },
+    "Senna": {
+      "strong": ["Tahm Kench", "Braum"],
+      "weak": ["Nautilus", "Leona", "Pyke"],
+      "confidence": "high"
+    },
+    "Seraphine": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Nautilus", "Leona", "Pyke"],
+      "confidence": "high"
+    },
+    "Sett": {
+      "strong": ["Aatrox", "Ornn", "Nasus"],
+      "weak": ["Vayne", "Quinn", "Mordekaiser"],
+      "confidence": "high"
+    },
+    "Shaco": {
+      "strong": ["Twitch", "Evelynn"],
+      "weak": ["Rammus", "Rek'Sai", "Fiddlesticks"],
+      "confidence": "high"
+    },
+    "Shen": {
+      "strong": ["Fiora", "Jax"],
+      "weak": ["Mordekaiser", "Illaoi", "Darius"],
+      "confidence": "high"
+    },
+    "Shyvana": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Graves", "Kha'Zix", "Kindred"],
+      "confidence": "high"
+    },
+    "Singed": {
+      "strong": ["Nasus", "Malphite"],
+      "weak": ["Kayle", "Jayce", "Teemo"],
+      "confidence": "high"
+    },
+    "Sion": {
+      "strong": ["Malphite", "Ornn"],
+      "weak": ["Fiora", "Darius", "Gwen"],
+      "confidence": "high"
+    },
+    "Sivir": {
+      "strong": ["Jinx", "Aphelios"],
+      "weak": ["Draven", "Samira", "Caitlyn"],
+      "confidence": "high"
+    },
+    "Skarner": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Viego", "Graves", "Lillia"],
+      "confidence": "high"
+    },
+    "Smolder": {
+      "strong": ["Jinx"],
+      "weak": ["Kai'Sa", "Varus", "Zeri"],
+      "confidence": "high"
+    },
+    "Sona": {
+      "strong": ["Soraka", "Yuumi"],
+      "weak": ["Blitzcrank", "Nautilus", "Leona"],
+      "confidence": "high"
+    },
+    "Soraka": {
+      "strong": ["Yuumi", "Sona"],
+      "weak": ["Blitzcrank", "Pyke", "Nautilus"],
+      "confidence": "high"
+    },
+    "Swain": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Sylas", "Yone", "Syndra"],
+      "confidence": "high"
+    },
+    "Sylas": {
+      "strong": ["Azir", "Orianna", "Ahri"],
+      "weak": ["Yone", "Aurora"],
+      "confidence": "high"
+    },
+    "Syndra": {
+      "strong": ["Orianna", "Lux", "Veigar"],
+      "weak": ["Fizz", "Zed", "Kassadin"],
+      "confidence": "high"
+    },
+    "Tahm Kench": {
+      "strong": ["Aatrox", "Renekton", "Sett"],
+      "weak": ["Gwen", "Vayne", "Mordekaiser"],
+      "confidence": "high"
+    },
+    "Taliyah": {
+      "strong": ["Amumu", "Sejuani", "Zac"],
+      "weak": ["Kha'Zix", "Rengar", "Graves"],
+      "confidence": "high"
+    },
+    "Talon": {
+      "strong": ["Lux", "Veigar", "Ahri"],
+      "weak": ["Galio", "Malphite", "Vex"],
+      "confidence": "high"
+    },
+    "Taric": {
+      "strong": ["Braum", "Tahm Kench"],
+      "weak": ["Morgana", "Janna", "Brand"],
+      "confidence": "high"
+    },
+    "Teemo": {
+      "strong": ["Garen", "Nasus", "Tryndamere"],
+      "weak": ["Malphite", "Aatrox", "Yorick"],
+      "confidence": "high"
+    },
+    "Thresh": {
+      "strong": ["Blitzcrank", "Pyke"],
+      "weak": ["Morgana", "Janna", "Zyra"],
+      "confidence": "high"
+    },
+    "Tristana": {
+      "strong": ["Jinx", "Kai'Sa", "Ezreal"],
+      "weak": ["Draven", "Samira", "Caitlyn"],
+      "confidence": "high"
+    },
+    "Trundle": {
+      "strong": ["Rammus", "Sejuani", "Ornn"],
+      "weak": ["Teemo", "Gnar", "Kayle"],
+      "confidence": "high"
+    },
+    "Tryndamere": {
+      "strong": ["Yasuo", "Yone"],
+      "weak": ["Malphite", "Jax", "Nasus"],
+      "confidence": "high"
+    },
+    "Twisted Fate": {
+      "strong": ["Ryze", "Lux"],
+      "weak": ["Fizz", "Zed", "Sylas"],
+      "confidence": "high"
+    },
+    "Twitch": {
+      "strong": ["Jinx", "Ezreal"],
+      "weak": ["Draven", "Caitlyn", "Samira"],
+      "confidence": "high"
+    },
+    "Udyr": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Viego", "Graves", "Kindred"],
+      "confidence": "high"
+    },
+    "Urgot": {
+      "strong": ["Garen", "Nasus"],
+      "weak": ["Vayne", "Illaoi", "Mordekaiser"],
+      "confidence": "high"
+    },
+    "Varus": {
+      "strong": ["Jinx", "Kai'Sa"],
+      "weak": ["Xayah", "Zeri", "Smolder"],
+      "confidence": "high"
+    },
+    "Vayne": {
+      "strong": ["Ornn", "Cho'Gath", "Sett"],
+      "weak": ["Caitlyn", "Draven", "Tristana"],
+      "confidence": "high"
+    },
+    "Veigar": {
+      "strong": ["Lux", "Ahri", "Orianna"],
+      "weak": ["Kassadin", "Fizz", "Sylas"],
+      "confidence": "high"
+    },
+    "Vel'Koz": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Zed", "Fizz", "Katarina"],
+      "confidence": "high"
+    },
+    "Vex": {
+      "strong": ["Sylas", "Akali", "Yone"],
+      "weak": ["Lux", "Orianna", "Syndra"],
+      "confidence": "high"
+    },
+    "Vi": {
+      "strong": ["Fiddlesticks", "Sejuani"],
+      "weak": ["Lee Sin", "Lillia"],
+      "confidence": "high"
+    },
+    "Viego": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Graves", "Kha'Zix", "Kindred"],
+      "confidence": "high"
+    },
+    "Viktor": {
+      "strong": ["Azir", "Lux"],
+      "weak": ["Sylas", "Yone", "Kassadin"],
+      "confidence": "high"
+    },
+    "Vladimir": {
+      "strong": ["Veigar", "Lux"],
+      "weak": ["Cassiopeia", "Sylas", "Malzahar"],
+      "confidence": "high"
+    },
+    "Volibear": {
+      "strong": ["Yasuo", "Yone", "Renekton"],
+      "weak": ["Vayne", "Illaoi", "Gnar"],
+      "confidence": "high"
+    },
+    "Warwick": {
+      "strong": ["Yasuo", "Yone", "Master Yi"],
+      "weak": ["Graves", "Kha'Zix", "Viego"],
+      "confidence": "high"
+    },
+    "Wukong": {
+      "strong": ["Yasuo", "Yone", "Malphite"],
+      "weak": ["Rek'Sai", "Graves", "Kha'Zix"],
+      "confidence": "high"
+    },
+    "Xayah": {
+      "strong": ["Kai'Sa", "Zeri"],
+      "weak": ["Jinx", "Varus"],
+      "confidence": "high"
+    },
+    "Xerath": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Fizz", "Zed", "Katarina"],
+      "confidence": "high"
+    },
+    "Xin Zhao": {
+      "strong": ["Amumu", "Sejuani", "Lee Sin"],
+      "weak": ["Rammus", "Graves", "Kha'Zix"],
+      "confidence": "high"
+    },
+    "Yasuo": {
+      "strong": ["Lux", "Ahri"],
+      "weak": ["Renekton", "Pantheon", "Akali"],
+      "confidence": "high"
+    },
+    "Yone": {
+      "strong": ["Azir", "Orianna", "Ahri"],
+      "weak": ["Aurora"],
+      "confidence": "high"
+    },
+    "Yorick": {
+      "strong": ["Ornn", "Cho'Gath"],
+      "weak": ["Irelia", "Jax", "Tryndamere"],
+      "confidence": "high"
+    },
+    "Yunara": {
+      "strong": ["Ezreal", "Sivir"],
+      "weak": ["Nilah", "Swain"],
+      "confidence": "low"
+    },
+    "Zaahen": {
+      "strong": ["Yone", "Trundle"],
+      "weak": ["Illaoi", "Singed"],
+      "confidence": "low"
+    },
+    "Yuumi": {
+      "strong": ["Soraka", "Sona"],
+      "weak": ["Blitzcrank", "Nautilus", "Leona"],
+      "confidence": "high"
+    },
+    "Zac": {
+      "strong": ["Amumu", "Sejuani"],
+      "weak": ["Viego", "Graves", "Kindred"],
+      "confidence": "high"
+    },
+    "Zed": {
+      "strong": ["Lux", "Veigar", "Ahri"],
+      "weak": ["Galio", "Malphite", "Vex"],
+      "confidence": "high"
+    },
+    "Zeri": {
+      "strong": ["Jinx", "Smolder", "Varus"],
+      "weak": ["Kai'Sa", "Xayah"],
+      "confidence": "high"
+    },
+    "Ziggs": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Zed", "Fizz", "Yasuo"],
+      "confidence": "high"
+    },
+    "Zilean": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Syndra", "Orianna", "Viktor"],
+      "confidence": "high"
+    },
+    "Zoe": {
+      "strong": ["Lux", "Ahri"],
+      "weak": ["Yasuo", "Yone", "Sylas"],
+      "confidence": "high"
+    },
+    "Zyra": {
+      "strong": ["Lux", "Brand"],
+      "weak": ["Nautilus", "Leona", "Pyke"],
+      "confidence": "high"
+    }
+  }
+}

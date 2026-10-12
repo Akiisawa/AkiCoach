@@ -32,8 +32,10 @@ function escHandler(e) { if (e.key === 'Escape') closePicker(); }
    ═══════════════════════════════════════ */
 export function openChampionPicker(side, kind, idx) {
   const d = state.draft;
+  const fearless = state.fearless || {};
+  const locked = fearless.enabled ? new Set(fearless.lockedChamps || []) : new Set();
 
-  // Campeões já usados em outros slots (não bloqueia o próprio slot)
+  // Campeões já usados em outros slots
   const used = new Set();
   ['blue', 'red'].forEach(s => {
     ['bans', 'picks'].forEach(k => {
@@ -45,6 +47,7 @@ export function openChampionPicker(side, kind, idx) {
 
   const sideLabel = side === 'blue' ? 'Lado Azul' : 'Lado Vermelho';
   const kindLabel = kind === 'bans' ? 'Ban' : 'Pick';
+  const gameLabel = fearless.enabled ? ` · Jogo ${fearless.currentGame}` : '';
 
   const root = $('#modal-root');
   root.innerHTML = `
@@ -52,7 +55,7 @@ export function openChampionPicker(side, kind, idx) {
       <div class="modal read-modal picker-modal">
         <div class="modal-head">
           <i class="fa-solid fa-dragon" style="color:var(--primary)"></i>
-          <h3>Escolher ${kindLabel} — ${sideLabel}</h3>
+          <h3>Escolher ${kindLabel} — ${sideLabel}${gameLabel}</h3>
           <button class="icon-btn" data-close><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body read-body" style="padding:0 !important">
@@ -61,14 +64,26 @@ export function openChampionPicker(side, kind, idx) {
             <input type="text" id="champ-picker-input" placeholder="Buscar campeão..." autocomplete="off">
             <span class="champ-picker-count" id="champ-picker-count">${CHAMPS.length}</span>
           </div>
+          ${locked.size ? `
+            <div class="picker-locked-bar">
+              <i class="fa-solid fa-lock"></i>
+              ${locked.size} campeão(ões) bloqueado(s) pela série Fearless
+            </div>` : ''}
           <div class="champ-picker-grid" id="champ-picker-grid">
             ${CHAMPS.map(name => {
               const isUsed = used.has(name);
-              return `<button type="button" class="champ-pick-item ${isUsed ? 'used' : ''}"
-                              data-champ="${esc(name)}" ${isUsed ? 'disabled' : ''}
-                              title="${esc(name)}${isUsed ? ' (já usado)' : ''}">
+              const isLocked = locked.has(name);
+              const isDisabled = isUsed || isLocked;
+              let cls = '';
+              let title = name;
+              if (isLocked) { cls = 'locked'; title = `${name} (bloqueado — Fearless)`; }
+              else if (isUsed) { cls = 'used'; title = `${name} (já usado)`; }
+              return `<button type="button" class="champ-pick-item ${cls}"
+                              data-champ="${esc(name)}" ${isDisabled ? 'disabled' : ''}
+                              title="${esc(title)}">
                 <img src="${iconUrl(name)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
                 <span>${esc(name)}</span>
+                ${isLocked ? `<i class="fa-solid fa-lock champ-pick-lock"></i>` : ''}
               </button>`;
             }).join('')}
           </div>
@@ -100,7 +115,7 @@ export function openChampionPicker(side, kind, idx) {
     counter.textContent = visible;
   });
 
-  grid.querySelectorAll('.champ-pick-item:not(.used)').forEach(item => {
+  grid.querySelectorAll('.champ-pick-item:not(.used):not(.locked)').forEach(item => {
     item.addEventListener('click', () => {
       pickChampion(side, kind, idx, item.dataset.champ);
       closePicker();
@@ -127,6 +142,12 @@ export function pickChampion(side, kind, idx, champ) {
   });
   if (used.includes(champ)) {
     toastIcon('Campeão já está no draft', 'fa-triangle-exclamation');
+    return false;
+  }
+
+  // Fearless: bloqueia pick/ban de campeões já usados em jogos anteriores
+  if (state.fearless?.enabled && (state.fearless.lockedChamps || []).includes(champ)) {
+    toastIcon(`${champ} está bloqueado (Fearless Draft)`, 'fa-lock');
     return false;
   }
 

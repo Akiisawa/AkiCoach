@@ -6,7 +6,24 @@ import {
 } from './state.js';
 import { champIconName } from './riot-api.js';
 
+let _counters = null;
+let _countersPromise = null;
 
+async function loadCounters() {
+  if (_counters) return _counters;
+  if (_countersPromise) return _countersPromise;
+  _countersPromise = fetch('data/counters.json')
+    .then(r => r.ok ? r.json() : { champions: {} })
+    .then(d => { _counters = d.champions || {}; return _counters; })
+    .catch(() => { _counters = {}; return {}; });
+  return _countersPromise;
+}
+
+
+loadCounters().then(() => {
+
+  document.dispatchEvent(new CustomEvent('aki:rerender'));
+});
 const $ = (s, r = document) => r.querySelector(s);
 
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1';
@@ -65,6 +82,10 @@ function canEditCalendar() {
 }
 
 function canEditRoster() {
+  return !isPlayerMode() || isStaffMode();
+}
+
+function canEditDraft() {
   return !isPlayerMode() || isStaffMode();
 }
 
@@ -880,7 +901,10 @@ export function viewScrims() {
 
 export function viewDraft() {
   const d = state.draft;
-  const playerMode = isPlayerMode();
+  const canDraft = canEditDraft();
+
+  const fearless = state.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
+  const fearlessSeriesLabel = fearless.totalGames === 3 ? 'MD3' : fearless.totalGames === 5 ? 'MD5' : `MD${fearless.totalGames}`;
 
   /* ── Slots já usados ── */
   const usedChamps = new Set();
@@ -890,16 +914,14 @@ export function viewDraft() {
     });
   });
 
-  /* ── Sugestões baseadas nas pools do time ── */
+  /* ── Sugestões ── */
   const tierRank = { S: 0, A: 1, B: 2, C: 3 };
   const champAgg = new Map();
   state.players.filter(p => p.status !== 'staff').forEach(p => {
     safePool(p).forEach(c => {
       if (!c.champ) return;
       if (usedChamps.has(c.champ)) return;
-      if (!champAgg.has(c.champ)) {
-        champAgg.set(c.champ, { champ: c.champ, tiers: [], owners: [] });
-      }
+      if (!champAgg.has(c.champ)) champAgg.set(c.champ, { champ: c.champ, tiers: [], owners: [] });
       const entry = champAgg.get(c.champ);
       entry.tiers.push(c.tier);
       entry.owners.push(p.nick);
@@ -914,7 +936,19 @@ export function viewDraft() {
     })
     .slice(0, 14);
 
-  /* ── Slot render ── */
+  /* ── Counters da última pick (mais recente entre os dois lados) ── */
+  const allPicks = [];
+  ['blue', 'red'].forEach(s => {
+    d[s].picks.forEach((c, i) => { if (c) allPicks.push({ champ: c, side: s, idx: i }); });
+  });
+  const lastPick = allPicks[allPicks.length - 1];
+  const countersFor = (champ) => {
+    if (!_counters || !champ) return null;
+    return _counters[champ] || null;
+  };
+  const lastCounters = countersFor(lastPick?.champ);
+
+  /* ── Slot HTML ── */
   const slotHTML = (side, kind, i) => {
     const val = d[side][kind][i] || '';
     const hasChamp = !!val;
@@ -924,7 +958,7 @@ export function viewDraft() {
 
     return `
       <div class="draft-slot ${hasChamp ? 'filled' : 'empty'} ${isBan ? 'ban-slot' : 'pick-slot'}"
-           ${!playerMode ? `data-act="draft-pick" data-slot="${side}.${kind}.${i}"` : ''}>
+           ${canDraft ? `data-act="draft-pick" data-slot="${side}.${kind}.${i}"` : ''}>
         ${hasChamp ? `
           <div class="draft-slot-bg" style="background-image:url('${splash}')"></div>
           <div class="draft-slot-overlay"></div>
@@ -932,7 +966,7 @@ export function viewDraft() {
         <div class="draft-slot-content">
           <span class="draft-slot-idx">${idxLabel}</span>
           <span class="draft-slot-name">${hasChamp ? esc(val) : (isBan ? 'Banir...' : 'Escolher...')}</span>
-          ${hasChamp && !playerMode ? `<button type="button" class="draft-slot-clear" data-act="draft-clear" data-slot="${side}.${kind}.${i}" title="Remover"><i class="fa-solid fa-xmark"></i></button>` : ''}
+          ${hasChamp && canDraft ? `<button type="button" class="draft-slot-clear" data-act="draft-clear" data-slot="${side}.${kind}.${i}" title="Remover"><i class="fa-solid fa-xmark"></i></button>` : ''}
         </div>
       </div>`;
   };
@@ -951,8 +985,8 @@ export function viewDraft() {
             const owners = [...new Set(s.owners)].slice(0, 2).join(', ');
             const extra = s.owners.length > 2 ? ` +${s.owners.length - 2}` : '';
             return `
-              <div class="draft-suggestion ${playerMode ? '' : 'clickable'}"
-                   ${playerMode ? '' : `draggable="true" data-champ="${esc(s.champ)}" data-act="draft-suggest-fill"`}>
+              <div class="draft-suggestion ${canDraft ? 'clickable' : ''}"
+                   ${canDraft ? `draggable="true" data-champ="${esc(s.champ)}" data-act="draft-suggest-fill"` : ''}>
                 <img src="${championIconUrl(s.champ)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
                 <div class="draft-suggestion-info">
                   <span class="draft-suggestion-name">${esc(s.champ)}</span>
@@ -968,8 +1002,45 @@ export function viewDraft() {
       </div>`}
     </aside>`;
 
+  /* ── Painel de counters ── */
+  const countersHTML = lastPick ? `
+    <div class="draft-counters" id="draft-counters">
+      <div class="draft-counters-head">
+        <i class="fa-solid fa-scale-balanced"></i>
+        <span>Counters — <b>${esc(lastPick.champ)}</b></span>
+        <span class="draft-counters-side ${lastPick.side === 'blue' ? 'blue' : 'red'}">${lastPick.side === 'blue' ? 'Azul' : 'Vermelho'}</span>
+      </div>
+      ${lastCounters ? `
+        <div class="draft-counters-grid">
+          <div class="draft-counters-col strong">
+            <div class="draft-counters-label"><i class="fa-solid fa-arrow-up"></i> Forte contra</div>
+            <div class="draft-counters-champs">
+              ${lastCounters.strong.map(c => `<span class="counter-chip strong">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
+            </div>
+          </div>
+          <div class="draft-counters-col weak">
+            <div class="draft-counters-label"><i class="fa-solid fa-arrow-down"></i> Fraco contra</div>
+            <div class="draft-counters-champs">
+              ${lastCounters.weak.map(c => `<span class="counter-chip weak">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
+            </div>
+          </div>
+        </div>
+      ` : `
+        <div class="draft-counters-empty">
+          <i class="fa-solid fa-circle-info"></i>
+          Sem dados de counter para <b>${esc(lastPick.champ)}</b>. Adicione em <code>public/data/counters.json</code>.
+        </div>
+      `}
+    </div>
+  ` : `
+    <div class="draft-counters draft-counters-empty-state">
+      <i class="fa-solid fa-scale-balanced" style="opacity:.3;font-size:22px"></i>
+      <span>Escolha um campeão para ver os counters</span>
+    </div>
+  `;
+
   return `
-  ${!playerMode ? `
+  ${canDraft ? `
   <div class="draft-toolbar">
     <div class="draft-timer" id="draft-timer">
       <span class="draft-timer-label">TIMER</span>
@@ -981,37 +1052,90 @@ export function viewDraft() {
 
     <div style="flex:1"></div>
 
+    <button class="btn ${fearless.enabled ? 'danger' : ''}" data-act="toggle-fearless" title="${fearless.enabled ? 'Desativar Fearless' : 'Ativar Fearless Draft'}">
+      <i class="fa-solid fa-fire"></i> ${fearless.enabled ? 'Sair do Fearless' : 'Fearless'}
+    </button>
+
+    ${fearless.enabled ? `
+      <select class="fearless-series-select" data-act="set-fearless-series">
+        <option value="3" ${fearless.totalGames === 3 ? 'selected' : ''}>MD3</option>
+        <option value="5" ${fearless.totalGames === 5 ? 'selected' : ''}>MD5</option>
+      </select>
+      <button class="btn primary" data-act="fearless-next-game" title="Salvar picks e avançar">
+        <i class="fa-solid fa-forward"></i> Próximo Jogo
+      </button>
+      <button class="btn" data-act="fearless-reset" title="Resetar série (voltar ao Jogo 1)">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </button>
+    ` : ''}
+
     <button class="btn" data-act="save-draft"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
     <button class="btn danger" data-act="clear-draft"><i class="fa-solid fa-eraser"></i> Limpar</button>
     <span class="draft-count">${state.drafts.length} salvo(s)</span>
-  </div>` : `
+  </div>
+
+  ${fearless.enabled ? `
+  <div class="fearless-banner">
+    <div class="fearless-banner-left">
+      <i class="fa-solid fa-fire"></i>
+      <span><b>Fearless Draft</b> · Série ${fearlessSeriesLabel}</span>
+    </div>
+    <div class="fearless-banner-game">
+      Jogo <b>${fearless.currentGame}</b> de <b>${fearless.totalGames}</b>
+    </div>
+    <div class="fearless-banner-locks">
+      <i class="fa-solid fa-lock"></i>
+      ${fearless.lockedChamps.length} bloqueado(s)
+    </div>
+  </div>
+  ` : ''}
+  ` : `
   <div class="draft-toolbar">
     <div class="draft-mode-badge"><i class="fa-solid fa-eye"></i> Modo visualização</div>
   </div>`}
 
   <div class="draft-layout">
-    <div class="draft-board">
-      <div class="side blue">
-        <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
-        <div class="draft-section-label">Bans</div>
-        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','bans',i)).join('')}</div>
-        <div class="draft-section-label">Picks</div>
-        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','picks',i)).join('')}</div>
+    <div>
+      <div class="draft-board">
+        <div class="side blue">
+          <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
+          <div class="draft-section-label">Bans</div>
+          <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','bans',i)).join('')}</div>
+          <div class="draft-section-label">Picks</div>
+          <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','picks',i)).join('')}</div>
+        </div>
+        <div class="draft-mid"><div class="vs">VS</div></div>
+        <div class="side red">
+          <h4><i class="fa-solid fa-fire"></i> Lado Vermelho</h4>
+          <div class="draft-section-label">Bans</div>
+          <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','bans',i)).join('')}</div>
+          <div class="draft-section-label">Picks</div>
+          <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','picks',i)).join('')}</div>
+        </div>
       </div>
-      <div class="draft-mid"><div class="vs">VS</div></div>
-      <div class="side red">
-        <h4><i class="fa-solid fa-fire"></i> Lado Vermelho</h4>
-        <div class="draft-section-label">Bans</div>
-        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','bans',i)).join('')}</div>
-        <div class="draft-section-label">Picks</div>
-        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','picks',i)).join('')}</div>
-      </div>
+      ${countersHTML}
+      ${fearless.enabled && fearless.lockedChamps.length ? `
+      <div class="fearless-locked-panel">
+        <div class="fearless-locked-head">
+          <i class="fa-solid fa-lock"></i>
+          <span>Campeões Bloqueados pela Série</span>
+          <span class="fearless-locked-count">${fearless.lockedChamps.length}</span>
+        </div>
+        <div class="fearless-locked-grid">
+          ${fearless.lockedChamps.map(name => `
+            <div class="fearless-locked-chip" title="${esc(name)}">
+              <img src="${championIconUrl(name)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+              <span>${esc(name)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
     </div>
 
     ${sidebarHTML}
   </div>
 
-  ${!playerMode && state.drafts.length ? `
+  ${canDraft && state.drafts.length ? `
   <div class="card" style="margin-top:22px">
     <div class="card-head"><h3><i class="fa-solid fa-floppy-disk"></i> Drafts Salvos</h3></div>
     <div class="grid g-auto">

@@ -85,6 +85,13 @@ export const state = {
     blue: { bans:['','','','',''], picks:['','','','',''] },
     red: { bans:['','','','',''], picks:['','','','',''] }
   },
+    fearless: {
+      enabled: false,
+      totalGames: 3,
+      currentGame: 1,
+      lockedChamps: [],
+      history: []
+    },
   comps: [],
   notes: [],
   tasks: [],
@@ -129,6 +136,13 @@ export function seedData() {
     ],
     tournaments: [],
     drafts: [],
+      fearless: {
+      enabled: false,
+      totalGames: 3,
+      currentGame: 1,
+      lockedChamps: [],
+      history: []
+    },
     comps: [],
     notes: [],
     tasks: [],
@@ -168,6 +182,7 @@ export async function loadFromFirebase(uid) {
   state.scrims = data.scrims ? Object.values(data.scrims) : [];
   state.tournaments = data.tournaments ? Object.values(data.tournaments) : [];
   state.drafts = data.drafts ? Object.values(data.drafts) : [];
+  state.fearless = data.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
   state.comps = data.comps ? Object.values(data.comps) : [];
   state.notes = data.notes ? Object.values(data.notes) : [];
   state.tasks = data.tasks ? Object.values(data.tasks) : [];
@@ -185,6 +200,7 @@ export async function saveToFirebase() {
     scrims: state.scrims,
     tournaments: state.tournaments,
     drafts: state.drafts,
+    fearless: state.fearless,
     comps: state.comps,
     notes: state.notes,
     tasks: state.tasks,
@@ -203,6 +219,7 @@ export function listenTeam(uid, cb) {
     if (data.scrims) state.scrims = Object.values(data.scrims);
     if (data.tournaments) state.tournaments = Object.values(data.tournaments);
     if (data.drafts) state.drafts = Object.values(data.drafts);
+    if (data.fearless) state.fearless = data.fearless;
     if (data.comps) state.comps = Object.values(data.comps);
     if (data.notes) state.notes = Object.values(data.notes);
     if (data.tasks) state.tasks = Object.values(data.tasks);
