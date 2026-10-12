@@ -1013,7 +1013,7 @@ export function viewOpponents() {
       const roster = o.roster || {};
       const hasRoster = Object.values(roster).some(Boolean);
       return `
-      <div class="opp-card">
+      <div class="opp-card" data-act="view-opponent" data-id="${o.id}" title="Clique para ler">
         <div style="display:flex;align-items:flex-start;gap:8px">
           <div style="flex:1;min-width:0">
             <div class="opp-name">${esc(o.name)}</div>
@@ -1045,6 +1045,10 @@ export function viewOpponents() {
 
         <div style="margin-top:10px;font-size:11px;color:var(--muted);padding-top:10px;border-top:1px solid var(--border-soft)">
           H2H: <b style="color:${o.wins>o.losses?'#5ee08c':o.wins<o.losses?'#ff9b9b':'var(--muted)'}">${o.wins||0}V — ${o.losses||0}D</b>
+        </div>
+
+        <div class="comp-read-hint">
+          <i class="fa-solid fa-expand"></i> Clique para ver detalhes
         </div>
       </div>`;
     }).join('')}

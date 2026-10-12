@@ -908,6 +908,7 @@ export function bindActions() {
       }
 
       case 'new-opponent': modalOpponent(); break;
+      case 'view-opponent': modalViewOpponent(id); break;
       case 'edit-opponent': modalOpponent(id); break;
       case 'del-opponent': state.opponents = state.opponents.filter(x => x.id !== id); save(); render(); toastIcon('Oponente removido'); break;
 
@@ -1222,6 +1223,151 @@ export function modalViewComp(id) {
                 <i class="fa-solid fa-circle-info"></i> Nenhuma descrição fornecida.
               </div>
             </div>`}
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn primary" data-close>
+            <i class="fa-solid fa-check"></i> Fechar
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  const backdrop = $('.modal-backdrop', root);
+  backdrop.addEventListener('mousedown', e => { if (e.target === backdrop) closeModal(); });
+  $$('[data-close]', root).forEach(b => b.addEventListener('click', closeModal));
+  document.addEventListener('keydown', escHandler);
+}
+
+/* ═══════════════════════════════════════
+   MODAL: Ver Oponente (leitura)
+   ═══════════════════════════════════════ */
+export function modalViewOpponent(id) {
+  const o = state.opponents.find(x => x.id === id);
+  if (!o) return;
+
+  const r = o.roster || {};
+  const hasRoster = Object.values(r).some(Boolean);
+  const wins = o.wins || 0;
+  const losses = o.losses || 0;
+  const total = wins + losses;
+  const wr = total ? Math.round(wins / total * 100) : 0;
+
+  const roleRow = (label, nick) => {
+    if (!nick) {
+      return `
+      <div class="read-role-row empty">
+        <div class="read-role-content">
+          <span class="read-role-label">${label}</span>
+          <span class="read-role-champ empty">—</span>
+        </div>
+      </div>`;
+    }
+
+    // Tenta gerar link pro OP.GG se tiver #TAG
+    const [name, tag] = nick.split('#').map(s => s.trim());
+    const url = (name && tag) ? `https://www.op.gg/summoners/br/${encodeURIComponent(name)}-${encodeURIComponent(tag)}` : '';
+
+    const inner = `
+      <span class="read-role-label">${label}</span>
+      <span class="read-role-champ">${esc(nick)}</span>
+      ${url ? `<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px;color:var(--primary-light);opacity:.7;margin-left:auto"></i>` : ''}
+    `;
+
+    return url
+      ? `<a class="read-role-row" href="${url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;cursor:pointer" title="Abrir ${esc(nick)} no OP.GG">
+          <div class="read-role-content">${inner}</div>
+        </a>`
+      : `<div class="read-role-row"><div class="read-role-content">${inner}</div></div>`;
+  };
+
+  const root = $('#modal-root');
+  root.innerHTML = `
+    <div class="modal-backdrop">
+      <div class="modal read-modal">
+        <div class="modal-head">
+          <i class="fa-solid fa-chess" style="color:#ff9b9b"></i>
+          <h3>${esc(o.name || 'Oponente')}</h3>
+          <button class="icon-btn" data-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body read-body">
+
+          <div class="read-meta">
+            ${o.tag ? `<span class="read-author"><i class="fa-solid fa-tag"></i> ${esc(o.tag)}</span>` : ''}
+            ${total ? `
+              <span class="read-author" style="color:${wr>=50?'#5ee08c':'#ff9b9b'}">
+                <i class="fa-solid fa-trophy"></i> H2H: ${wins}V — ${losses}D (${wr}%)
+              </span>` : `
+              <span class="read-author"><i class="fa-solid fa-trophy"></i> Sem confrontos registrados</span>`}
+          </div>
+
+          ${(o.playstyle || o.weakness) ? `
+          <div class="read-section">
+            <div class="read-section-title">
+              <i class="fa-solid fa-gamepad"></i> Estilo de Jogo
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${o.playstyle ? `
+                <div class="read-info-row">
+                  <span class="read-info-label">Estilo</span>
+                  <span class="read-info-value">${esc(o.playstyle)}</span>
+                </div>` : ''}
+              ${o.weakness ? `
+                <div class="read-info-row warn">
+                  <span class="read-info-label" style="color:#f7bd4a">Ponto Fraco</span>
+                  <span class="read-info-value" style="color:#f7bd4a">${esc(o.weakness)}</span>
+                </div>` : ''}
+            </div>
+          </div>` : ''}
+
+          ${hasRoster ? `
+          <div class="read-section">
+            <div class="read-section-title" style="color:#ff9b9b">
+              <i class="fa-solid fa-users-viewfinder" style="color:#ff9b9b"></i> Roster Inimigo
+            </div>
+            <div class="read-roles">
+              ${roleRow('TOP', r.TOP)}
+              ${roleRow('JUNGLE', r.JNG)}
+              ${roleRow('MID', r.MID)}
+              ${roleRow('ADC', r.ADC)}
+              ${roleRow('SUPORTE', r.SUP)}
+            </div>
+          </div>` : ''}
+
+          ${(o.picks || o.bans) ? `
+          <div class="read-section">
+            <div class="read-section-title">
+              <i class="fa-solid fa-star"></i> Picks & Bans
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${o.picks ? `
+                <div class="read-info-row">
+                  <span class="read-info-label">Picks favoritos</span>
+                  <span class="read-info-value">${esc(o.picks)}</span>
+                </div>` : ''}
+              ${o.bans ? `
+                <div class="read-info-row warn">
+                  <span class="read-info-label" style="color:#ff9b9b">Bans recorrentes</span>
+                  <span class="read-info-value" style="color:#ff9b9b">${esc(o.bans)}</span>
+                </div>` : ''}
+            </div>
+          </div>` : ''}
+
+          ${o.notes ? `
+          <div class="read-section">
+            <div class="read-section-title">
+              <i class="fa-solid fa-scroll"></i> Notas de Scouting
+            </div>
+            <div class="read-description">${esc(o.notes)}</div>
+          </div>` : `
+          <div class="read-section">
+            <div class="read-section-title">
+              <i class="fa-solid fa-scroll"></i> Notas de Scouting
+            </div>
+            <div class="read-description empty">
+              <i class="fa-solid fa-circle-info"></i> Nenhuma nota de scouting registrada.
+            </div>
+          </div>`}
+
         </div>
         <div class="modal-foot">
           <button type="button" class="btn primary" data-close>

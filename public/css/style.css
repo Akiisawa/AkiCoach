@@ -1954,3 +1954,63 @@ table.matrix tr:hover td:first-child{background:rgba(74,158,255,.08)}
   .matrix-search{ min-width:0; flex:1; }
   .matrix-search input{ font-size:12px; }
 }
+
+/* ═══ OPP CARD CLICÁVEL ═══ */
+.opp-card[data-act="view-opponent"]{
+  cursor:pointer;
+}
+.opp-card[data-act="view-opponent"]:hover{
+  border-color:rgba(74,158,255,.55);
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(0,0,0,.4),0 0 20px rgba(74,158,255,.12);
+}
+
+/* ═══ INFO ROWS NO MODAL DE OPONENTE ═══ */
+.read-info-row{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding:11px 16px;
+  background:#070d16;
+  border:1px solid var(--border-soft);
+  border-left:3px solid rgba(74,158,255,.4);
+  border-radius:6px;
+}
+.read-info-row.warn{
+  border-left-color:rgba(245,158,11,.5);
+  background:rgba(245,158,11,.04);
+}
+.read-info-label{
+  flex:0 0 130px;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  padding-top:2px;
+}
+.read-info-value{
+  flex:1;
+  min-width:0;
+  font-size:13.5px;
+  color:var(--silver);
+  line-height:1.5;
+  word-break:break-word;
+}
+
+/* Rows de roster no modal (reaproveita .read-role-row que já existe) */
+.read-modal .read-role-row{
+  text-decoration:none;
+}
+.read-modal a.read-role-row:hover{
+  border-color:rgba(74,158,255,.5);
+  background:#0a1420;
+}
+
+@media(max-width:640px){
+  .read-info-row{
+    flex-direction:column;
+    gap:6px;
+  }
+  .read-info-label{ flex:0 0 auto; padding-top:0; }
+}
