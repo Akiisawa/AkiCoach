@@ -1,5 +1,5 @@
 import {
-  state, TODAY, WEEK, MONTHS, esc,
+  state, TODAY, WEEK, MONTHS, esc, CHAMPS,
   roleIcon, roleName,
   ROLE_ORDER, STAFF_ORDER, TIERS, PICK_TYPES, EVENT_TYPES, MOODS,
   fmtShort, dateKey, parseKey
@@ -10,15 +10,15 @@ import { champIconName } from './riot-api.js';
 const $ = (s, r = document) => r.querySelector(s);
 
 const CDRAGON = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1';
-const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn/14.1.1';
+const DDRAGON = 'https://ddragon.leagueoflegends.com/cdn/15.20.1';
 
 function profileIconUrl(id) {
   return `${CDRAGON}/profile-icons/${id}.jpg`;
 }
-function championSplashUrl(name) {
+export function championSplashUrl(name) {
   return `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champIconName(name)}_0.jpg`;
 }
-function championIconUrl(name) {
+export function championIconUrl(name) {
   return `${DDRAGON}/img/champion/${champIconName(name)}.png`;
 }
 
@@ -881,41 +881,136 @@ export function viewScrims() {
 export function viewDraft() {
   const d = state.draft;
   const playerMode = isPlayerMode();
-  const slot = (side, kind, i) => `
-    <div class="slot-row ${kind==='ban'?'ban':''}">
-      <span class="idx">${kind==='ban'?'B':'P'}${i+1}</span>
-      <input list="champ-list" data-draft="${side}.${kind}.${i}"
-             value="${esc(d[side][kind][i]||'')}" placeholder="${kind==='ban'?'Ban…':'Pick…'}" autocomplete="off"
-             ${playerMode ? 'readonly' : ''}>
-    </div>`;
+
+  /* ── Slots já usados ── */
+  const usedChamps = new Set();
+  ['blue', 'red'].forEach(s => {
+    ['bans', 'picks'].forEach(k => {
+      d[s][k].forEach(c => { if (c) usedChamps.add(c); });
+    });
+  });
+
+  /* ── Sugestões baseadas nas pools do time ── */
+  const tierRank = { S: 0, A: 1, B: 2, C: 3 };
+  const champAgg = new Map();
+  state.players.filter(p => p.status !== 'staff').forEach(p => {
+    safePool(p).forEach(c => {
+      if (!c.champ) return;
+      if (usedChamps.has(c.champ)) return;
+      if (!champAgg.has(c.champ)) {
+        champAgg.set(c.champ, { champ: c.champ, tiers: [], owners: [] });
+      }
+      const entry = champAgg.get(c.champ);
+      entry.tiers.push(c.tier);
+      entry.owners.push(p.nick);
+    });
+  });
+  const suggestions = [...champAgg.values()]
+    .sort((a, b) => {
+      const aBest = Math.min(...a.tiers.map(t => tierRank[t] ?? 9));
+      const bBest = Math.min(...b.tiers.map(t => tierRank[t] ?? 9));
+      if (aBest !== bBest) return aBest - bBest;
+      return b.tiers.length - a.tiers.length;
+    })
+    .slice(0, 14);
+
+  /* ── Slot render ── */
+  const slotHTML = (side, kind, i) => {
+    const val = d[side][kind][i] || '';
+    const hasChamp = !!val;
+    const isBan = kind === 'bans';
+    const idxLabel = `${isBan ? 'B' : 'P'}${i + 1}`;
+    const splash = hasChamp ? championSplashUrl(val) : '';
+
+    return `
+      <div class="draft-slot ${hasChamp ? 'filled' : 'empty'} ${isBan ? 'ban-slot' : 'pick-slot'}"
+           ${!playerMode ? `data-act="draft-pick" data-slot="${side}.${kind}.${i}"` : ''}>
+        ${hasChamp ? `
+          <div class="draft-slot-bg" style="background-image:url('${splash}')"></div>
+          <div class="draft-slot-overlay"></div>
+        ` : ''}
+        <div class="draft-slot-content">
+          <span class="draft-slot-idx">${idxLabel}</span>
+          <span class="draft-slot-name">${hasChamp ? esc(val) : (isBan ? 'Banir...' : 'Escolher...')}</span>
+          ${hasChamp && !playerMode ? `<button type="button" class="draft-slot-clear" data-act="draft-clear" data-slot="${side}.${kind}.${i}" title="Remover"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </div>
+      </div>`;
+  };
+
+  /* ── Sidebar de sugestões ── */
+  const sidebarHTML = `
+    <aside class="draft-sidebar">
+      <div class="draft-sidebar-head">
+        <i class="fa-solid fa-lightbulb"></i>
+        <span>Sugestões do Time</span>
+      </div>
+      ${suggestions.length ? `
+        <div class="draft-suggestions">
+          ${suggestions.map(s => {
+            const best = s.tiers.sort((a, b) => (tierRank[a] ?? 9) - (tierRank[b] ?? 9))[0];
+            const owners = [...new Set(s.owners)].slice(0, 2).join(', ');
+            const extra = s.owners.length > 2 ? ` +${s.owners.length - 2}` : '';
+            return `
+              <div class="draft-suggestion ${playerMode ? '' : 'clickable'}"
+                   ${playerMode ? '' : `draggable="true" data-champ="${esc(s.champ)}" data-act="draft-suggest-fill"`}>
+                <img src="${championIconUrl(s.champ)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+                <div class="draft-suggestion-info">
+                  <span class="draft-suggestion-name">${esc(s.champ)}</span>
+                  <span class="draft-suggestion-owners">${esc(owners)}${extra}</span>
+                </div>
+                <span class="tier ${best}">${best}</span>
+              </div>`;
+          }).join('')}
+        </div>
+      ` : `<div class="draft-sidebar-empty">
+        <i class="fa-solid fa-dragon" style="opacity:.3;font-size:24px"></i>
+        <span>Nenhuma sugestão disponível</span>
+      </div>`}
+    </aside>`;
+
   return `
   ${!playerMode ? `
-  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-    <button class="btn primary" data-act="save-draft"><i class="fa-solid fa-floppy-disk"></i> Salvar Draft</button>
-    <button class="btn" data-act="clear-draft"><i class="fa-solid fa-eraser"></i> Limpar</button>
+  <div class="draft-toolbar">
+    <div class="draft-timer" id="draft-timer">
+      <span class="draft-timer-label">TIMER</span>
+      <span class="draft-timer-value" id="draft-timer-value">30</span>
+      <span class="draft-timer-unit">s</span>
+    </div>
+    <button class="btn primary" data-act="draft-timer-start"><i class="fa-solid fa-play"></i> Iniciar</button>
+    <button class="btn" data-act="draft-timer-reset" title="Resetar"><i class="fa-solid fa-rotate-left"></i></button>
+
     <div style="flex:1"></div>
-    <span style="font-size:12px;color:var(--muted)">${state.drafts.length} draft(s) salvo(s)</span>
+
+    <button class="btn" data-act="save-draft"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+    <button class="btn danger" data-act="clear-draft"><i class="fa-solid fa-eraser"></i> Limpar</button>
+    <span class="draft-count">${state.drafts.length} salvo(s)</span>
   </div>` : `
-  <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px">
-    <i class="fa-solid fa-eye"></i> Modo visualização
+  <div class="draft-toolbar">
+    <div class="draft-mode-badge"><i class="fa-solid fa-eye"></i> Modo visualização</div>
   </div>`}
-  <div class="draft-board">
-    <div class="side blue">
-      <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
-      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin-bottom:8px">Bans</div>
-      ${[0,1,2,3,4].map(i => slot('blue','bans',i)).join('')}
-      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin:14px 0 8px">Picks</div>
-      ${[0,1,2,3,4].map(i => slot('blue','picks',i)).join('')}
+
+  <div class="draft-layout">
+    <div class="draft-board">
+      <div class="side blue">
+        <h4><i class="fa-solid fa-cube"></i> Lado Azul</h4>
+        <div class="draft-section-label">Bans</div>
+        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','bans',i)).join('')}</div>
+        <div class="draft-section-label">Picks</div>
+        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('blue','picks',i)).join('')}</div>
+      </div>
+      <div class="draft-mid"><div class="vs">VS</div></div>
+      <div class="side red">
+        <h4><i class="fa-solid fa-fire"></i> Lado Vermelho</h4>
+        <div class="draft-section-label">Bans</div>
+        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','bans',i)).join('')}</div>
+        <div class="draft-section-label">Picks</div>
+        <div class="draft-slot-list">${[0,1,2,3,4].map(i => slotHTML('red','picks',i)).join('')}</div>
+      </div>
     </div>
-    <div class="draft-mid"><div class="vs">VS</div></div>
-    <div class="side red">
-      <h4><i class="fa-solid fa-fire"></i> Lado Vermelho</h4>
-      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin-bottom:8px">Bans</div>
-      ${[0,1,2,3,4].map(i => slot('red','bans',i)).join('')}
-      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin:14px 0 8px">Picks</div>
-      ${[0,1,2,3,4].map(i => slot('red','picks',i)).join('')}
-    </div>
+
+    ${sidebarHTML}
   </div>
+
   ${!playerMode && state.drafts.length ? `
   <div class="card" style="margin-top:22px">
     <div class="card-head"><h3><i class="fa-solid fa-floppy-disk"></i> Drafts Salvos</h3></div>
@@ -938,13 +1033,6 @@ export function viewDraft() {
 }
 
 export function bindDraft() {
-  if (isPlayerMode()) return;
-  document.querySelectorAll('[data-draft]').forEach(inp => {
-    inp.addEventListener('input', () => {
-      const [side, kind, i] = inp.dataset.draft.split('.');
-      state.draft[side][kind][+i] = inp.value;
-    });
-  });
 }
 
 export function viewTasks() {

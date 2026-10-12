@@ -1,3 +1,4 @@
+import { initDraftDragDrop } from './champion-picker.js';
 import {
   state, seedData, loadFromFirebase, saveToFirebase, listenTeam,
   TODAY, WEEK, CHAMPS, esc, roleIcon, roleName,
@@ -394,6 +395,7 @@ async function initApp(user) {
   }
 
   listenTeam(user.uid, () => { renderNav(); renderView(); });
+  initDraftDragDrop();
   $('#user-name').textContent = state.coachName;
 
   renderNav();
@@ -507,6 +509,11 @@ setPlayerLogoutHandler(() => {
     closeModal();
     showPlayerLogin();
   });
+});
+
+document.addEventListener('aki:rerender', () => {
+  renderNav();
+  renderView();
 });
 
 bindAuthForm();

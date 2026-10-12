@@ -1,6 +1,6 @@
 import {
   state, ROLES, STAFF_ROLES, EVENT_TYPES, TIERS, PICK_TYPES, TODAY, uid, esc, saveToFirebase,
-  hashPin, generatePin
+  hashPin, generatePin, CHAMPS
 } from './state.js';
 import { toast, toastIcon } from './ui.js';
 import {
@@ -8,6 +8,10 @@ import {
   getChampionMastery, fetchPlayerStats, setCachedStats, champIconName
 } from './riot-api.js';
 import { setPlayerIndex, removePlayerIndex, dbUpdate } from './firebase.js';
+import {
+  openChampionPicker, clearDraftSlot, pickChampion,
+  startDraftTimer, resetDraftTimer, initDraftDragDrop
+} from './champion-picker.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -857,6 +861,42 @@ export function bindActions() {
       case 'del-tournament': modalConfirm('Excluir campeonato', 'Remover este registro?', () => {
         state.tournaments = state.tournaments.filter(x => x.id !== id); save(); render(); toastIcon('Campeonato removido');
       }); break;
+      case 'draft-pick': {
+        const slot = t.dataset.slot;
+        if (!slot) break;
+        const [side, kind, i] = slot.split('.');
+        openChampionPicker(side, kind, +i);
+        break;
+      }
+      case 'draft-clear': {
+        e.stopPropagation();
+        const slot = t.dataset.slot;
+        if (slot) clearDraftSlot(slot);
+        break;
+      }
+      case 'draft-timer-start': startDraftTimer(30); break;
+      case 'draft-timer-reset': resetDraftTimer(30); break;
+      case 'draft-suggest-fill': {
+        const champ = t.dataset.champ;
+        if (!champ) break;
+        // Preenche o próximo slot de pick disponível
+        const d = state.draft;
+        const order = [
+          ['blue','picks'], ['red','picks'], ['red','picks'], ['blue','picks'], ['blue','picks'],
+          ['red','picks'], ['red','picks'], ['blue','picks'], ['blue','picks'], ['red','picks']
+        ];
+        let filled = false;
+        for (const [s, k] of order) {
+          const idx = d[s][k].findIndex(x => !x);
+          if (idx !== -1) {
+            const ok = pickChampion(s, k, idx, champ);
+            filled = ok;
+            break;
+          }
+        }
+        if (!filled) toastIcon('Nenhum slot livre', 'fa-triangle-exclamation');
+        break;
+      }
       case 'save-draft': modalSaveDraft(); break;
       case 'clear-draft': modalConfirm('Limpar draft', 'Apagar todos os picks e bans?', () => {
         state.draft = { blue:{ bans:['','','','',''], picks:['','','','',''] }, red:{ bans:['','','','',''], picks:['','','','',''] } };
