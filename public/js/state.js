@@ -85,13 +85,13 @@ export const state = {
     blue: { bans:['','','','',''], picks:['','','','',''] },
     red: { bans:['','','','',''], picks:['','','','',''] }
   },
-    fearless: {
-      enabled: false,
-      totalGames: 3,
-      currentGame: 1,
-      lockedChamps: [],
-      history: []
-    },
+  fearless: {
+    enabled: false,
+    totalGames: 3,
+    currentGame: 1,
+    lockedChamps: [],
+    history: []
+  },
   counters: {},
   countersSeeded: false,
   comps: [],
@@ -110,6 +110,30 @@ export const WEEK = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 export const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 export const TODAY = dateKey(new Date());
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* Firebase RTDB não aceita ".", "#", "$", "/", "[", "]" em chaves.
+   Sanitizamos counters na borda (ex: "Dr. Mundo" -> "Dr·Mundo"). */
+const KEY_DOT = '\u2024';
+export const counterKey   = name => String(name || '').replace(/\./g, KEY_DOT);
+export const counterName  = key  => String(key  || '').replace(new RegExp(KEY_DOT, 'g'), '.');
+
+function countersFromDb(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw)) {
+    out[counterName(k)] = v;
+  }
+  return out;
+}
+
+function countersToDb(obj) {
+  const out = {};
+  if (!obj || typeof obj !== 'object') return out;
+  for (const [k, v] of Object.entries(obj)) {
+    out[counterKey(k)] = v;
+  }
+  return out;
+}
 
 export function seedData() {
   const off = n => { const d = new Date(); d.setDate(d.getDate() + n); return dateKey(d); };
@@ -138,7 +162,7 @@ export function seedData() {
     ],
     tournaments: [],
     drafts: [],
-      fearless: {
+    fearless: {
       enabled: false,
       totalGames: 3,
       currentGame: 1,
@@ -185,7 +209,7 @@ export async function loadFromFirebase(uid) {
   state.tournaments = data.tournaments ? Object.values(data.tournaments) : [];
   state.drafts = data.drafts ? Object.values(data.drafts) : [];
   state.fearless = data.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
-  state.counters = data.counters || {};
+  state.counters = countersFromDb(data.counters);
   state.draft = data.draft || state.draft;
   state.draftTimer = data.draftTimer || { running: false, value: 30, duration: 30, startedAt: 0 };
   state.countersSeeded = data.countersSeeded || false;
@@ -209,7 +233,7 @@ export async function saveToFirebase() {
     draft: state.draft,
     fearless: state.fearless,
     draftTimer: state.draftTimer,
-    counters: state.counters,
+    counters: countersToDb(state.counters),
     countersSeeded: state.countersSeeded,
     comps: state.comps,
     notes: state.notes,
@@ -232,7 +256,7 @@ export function listenTeam(uid, cb) {
     if (data.draft) state.draft = data.draft;
     if (data.draftTimer) state.draftTimer = data.draftTimer;
     if (data.fearless) state.fearless = data.fearless;
-    if (data.counters !== undefined) state.counters = data.counters;
+    if (data.counters !== undefined) state.counters = countersFromDb(data.counters);
     if (data.countersSeeded !== undefined) state.countersSeeded = data.countersSeeded;
     if (data.comps) state.comps = Object.values(data.comps);
     if (data.notes) state.notes = Object.values(data.notes);
@@ -288,6 +312,6 @@ function saveAndRender() {
 state.draftTimer = {
   running: false,
   value: 30,
-  startedAt: 0,   // timestamp do início
+  startedAt: 0,
   duration: 30,
 };
