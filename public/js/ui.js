@@ -776,11 +776,11 @@ export function viewMatrix() {
       map.get(c.champ)[p.id] = c.tier;
     });
   });
-  const rows = [...map.entries()].map(([champ, tiers]) => {
-    const owners = Object.values(tiers);
-    const best = TIERS.find(t => owners.includes(t)) || 'C';
-    return { champ, tiers, best, count: owners.length };
-  }).sort((a, b) => (TIERS.indexOf(a.best) - TIERS.indexOf(b.best)) || (b.count - a.count) || a.champ.localeCompare(b.champ));
+const rows = [...map.entries()].map(([champ, tiers]) => {
+  const owners = Object.values(tiers);
+  const best = TIERS.find(t => owners.includes(t)) || 'C';
+  return { champ, tiers, best, count: owners.length };
+}).sort((a, b) => a.champ.localeCompare(b.champ, 'pt-BR'));
 
   const searchTerm = (window.__akiMatrixFilter || '').toLowerCase().trim();
   const filtered = searchTerm
