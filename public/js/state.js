@@ -111,11 +111,31 @@ export const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Ju
 export const TODAY = dateKey(new Date());
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-/* Firebase RTDB não aceita ".", "#", "$", "/", "[", "]" em chaves.
-   Sanitizamos counters na borda (ex: "Dr. Mundo" -> "Dr·Mundo"). */
 const KEY_DOT = '\u2024';
 export const counterKey   = name => String(name || '').replace(/\./g, KEY_DOT);
 export const counterName  = key  => String(key  || '').replace(new RegExp(KEY_DOT, 'g'), '.');
+
+function normalizeFearless(raw) {
+  const base = { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
+  if (!raw || typeof raw !== 'object') return base;
+  const out = { ...base, ...raw };
+  if (!Array.isArray(out.lockedChamps)) out.lockedChamps = [];
+  if (!Array.isArray(out.history)) out.history = [];
+  if (typeof out.totalGames !== 'number') out.totalGames = 3;
+  if (typeof out.currentGame !== 'number') out.currentGame = 1;
+  return out;
+}
+
+function normalizeCounters(raw) {
+  const out = countersFromDb(raw);
+  for (const [k, v] of Object.entries(out)) {
+    if (!v || typeof v !== 'object') { delete out[k]; continue; }
+    if (!Array.isArray(v.strong)) v.strong = [];
+    if (!Array.isArray(v.weak))   v.weak   = [];
+    if (!v.confidence) v.confidence = 'medium';
+  }
+  return out;
+}
 
 function countersFromDb(raw) {
   const out = {};
@@ -208,8 +228,8 @@ export async function loadFromFirebase(uid) {
   state.scrims = data.scrims ? Object.values(data.scrims) : [];
   state.tournaments = data.tournaments ? Object.values(data.tournaments) : [];
   state.drafts = data.drafts ? Object.values(data.drafts) : [];
-  state.fearless = data.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
-  state.counters = countersFromDb(data.counters);
+  state.fearless = normalizeFearless(data.fearless);
+  state.counters = normalizeCounters(data.counters);
   state.draft = data.draft || state.draft;
   state.draftTimer = data.draftTimer || { running: false, value: 30, duration: 30, startedAt: 0 };
   state.countersSeeded = data.countersSeeded || false;
@@ -255,8 +275,8 @@ export function listenTeam(uid, cb) {
     if (data.drafts) state.drafts = Object.values(data.drafts);
     if (data.draft) state.draft = data.draft;
     if (data.draftTimer) state.draftTimer = data.draftTimer;
-    if (data.fearless) state.fearless = data.fearless;
-    if (data.counters !== undefined) state.counters = countersFromDb(data.counters);
+    if (data.fearless) state.fearless = normalizeFearless(data.fearless);
+    if (data.counters !== undefined) state.counters = normalizeCounters(data.counters);
     if (data.countersSeeded !== undefined) state.countersSeeded = data.countersSeeded;
     if (data.comps) state.comps = Object.values(data.comps);
     if (data.notes) state.notes = Object.values(data.notes);

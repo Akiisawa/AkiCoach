@@ -886,7 +886,12 @@ export function viewDraft() {
   const d = state.draft;
   const canDraft = canEditDraft();
 
-  const fearless = state.fearless || { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] };
+  const fearless = Object.assign(
+    { enabled: false, totalGames: 3, currentGame: 1, lockedChamps: [], history: [] },
+    state.fearless || {}
+  );
+  if (!Array.isArray(fearless.lockedChamps)) fearless.lockedChamps = [];
+  if (!Array.isArray(fearless.history)) fearless.history = [];
   const fearlessSeriesLabel = fearless.totalGames === 3 ? 'MD3' : fearless.totalGames === 5 ? 'MD5' : `MD${fearless.totalGames}`;
 
   /* ── Slots já usados ── */
@@ -1001,13 +1006,13 @@ export function viewDraft() {
           <div class="draft-counters-col strong">
             <div class="draft-counters-label"><i class="fa-solid fa-arrow-up"></i> Forte contra</div>
             <div class="draft-counters-champs">
-              ${lastCounters.strong.map(c => `<span class="counter-chip strong">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
+              ${(lastCounters.strong || []).map(c => `<span class="counter-chip strong">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
             </div>
           </div>
           <div class="draft-counters-col weak">
             <div class="draft-counters-label"><i class="fa-solid fa-arrow-down"></i> Fraco contra</div>
             <div class="draft-counters-champs">
-              ${lastCounters.weak.map(c => `<span class="counter-chip weak">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
+              ${(lastCounters.weak || []).map(c => `<span class="counter-chip weak">${esc(c)}</span>`).join('') || '<span class="counter-empty">—</span>'}
             </div>
           </div>
         </div>
