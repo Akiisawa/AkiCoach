@@ -682,11 +682,12 @@ export function modalConfirm(title, msg, onConfirm) {
     submitLabel: 'Confirmar',
     danger: true,
     onSubmit: () => {
-      try {
-        onConfirm();
-      } catch (e) {
-        console.error('Erro na confirmação:', e);
-      }
+      Promise.resolve()
+        .then(() => onConfirm())
+        .catch(e => {
+          console.error('Erro na confirmação:', e);
+          toastIcon('Erro: ' + (e?.message || 'operação falhou'), 'fa-circle-xmark');
+        });
       closeModal();
       return false;
     }
@@ -830,14 +831,24 @@ export function bindActions() {
       case 'edit-player': modalPlayer(id); break;
       case 'edit-team': modalTeam(); break;
       case 'link-riot': modalLinkRiot(id); break;
-      case 'del-player': modalConfirm('Excluir jogador', 'Remove o jogador, sua pool e o acesso dele.', async () => {
+      case 'del-player': {
         const p = state.players.find(x => x.id === id);
-        if (p?.pinHash) await removePlayerIndex(p.nick);
-        state.players = state.players.filter(x => x.id !== id);
-        save(); render(); toastIcon('Jogador removido');
-      }); break;
-      case 'open-pool': {
-        import('./ui.js').then(m => { m.setActivePlayerId(id); if (goFn) goFn('pools'); });
+        if (!p) break;
+
+        modalConfirm('Excluir jogador', 'Remove o jogador, sua pool e o acesso dele.', async () => {
+          if (p.pinHash) {
+            try {
+              await removePlayerIndex(p.nick);
+            } catch (e) {
+              console.warn('Index não removido:', e);
+              toastIcon('Index não removido (mas jogador será excluído)', 'fa-triangle-exclamation');
+            }
+          }
+          state.players = state.players.filter(x => x.id !== id);
+          await saveToFirebase();
+          render();
+          toastIcon('Jogador removido');
+        });
         break;
       }
       case 'open-player-detail': {

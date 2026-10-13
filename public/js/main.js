@@ -21,7 +21,7 @@ import {
 } from './actions.js';
 import {
   auth, signIn, logOut, onAuth, dbGet, dbSet,
-  getPlayerIndex, signInAsPlayer
+  getPlayerIndex, signInAsPlayer, setPlayerIndex  
 } from './firebase.js';
 
 async function ensureCountersLoaded() {
@@ -438,11 +438,43 @@ async function initPlayerApp(session) {
 
     await ensureCountersLoaded();
 
-    const p = state.players.find(x => x.id === session.playerId);
-    if (!p) return false;
+    let p = state.players.find(x => x.id === session.playerId);
 
-    window.__akiCurrentPlayer = session.playerId;
-    window.__akiPlayerNick = session.nick;
+    // Fallback: índice desatualizado → procura pelo nick
+    if (!p) {
+      p = state.players.find(x =>
+        x.nick.toLowerCase() === String(session.nick || '').toLowerCase()
+      );
+      if (p) {
+        console.warn('[login] índice desatualizado, corrigindo por nick');
+        session.playerId = p.id;
+        setPlayerSession(session);
+
+        // Reescreve o índice com o id correto
+        if (p.pinHash) {
+          try {
+            await setPlayerIndex(p.nick, {
+              teamUid: session.teamUid,
+              playerId: p.id,
+              nick: p.nick,
+              pinHash: p.pinHash,
+              isStaff: false,
+              updatedAt: Date.now(),
+            });
+          } catch (e) {
+            console.warn('Falha ao reescrever index:', e);
+          }
+        }
+      }
+    }
+
+    if (!p) {
+      console.error('[login] jogador não encontrado nem por id nem por nick', session);
+      return false;
+    }
+
+    window.__akiCurrentPlayer = p.id;
+    window.__akiPlayerNick = p.nick;
 
     playerModeActive = true;
     showPlayerApp(session);
