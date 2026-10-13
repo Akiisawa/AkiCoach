@@ -446,25 +446,8 @@ async function initPlayerApp(session) {
         x.nick.toLowerCase() === String(session.nick || '').toLowerCase()
       );
       if (p) {
-        console.warn('[login] índice desatualizado, corrigindo por nick');
         session.playerId = p.id;
         setPlayerSession(session);
-
-        // Reescreve o índice com o id correto
-        if (p.pinHash) {
-          try {
-            await setPlayerIndex(p.nick, {
-              teamUid: session.teamUid,
-              playerId: p.id,
-              nick: p.nick,
-              pinHash: p.pinHash,
-              isStaff: false,
-              updatedAt: Date.now(),
-            });
-          } catch (e) {
-            console.warn('Falha ao reescrever index:', e);
-          }
-        }
       }
     }
 
